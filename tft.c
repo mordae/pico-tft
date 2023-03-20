@@ -232,6 +232,8 @@ void tft_sync(void)
 		/* Send the buffer out while we prepare the next one. */
 		write_buffer_dma(buf, tft_width << 1);
 	}
+
+	dma_channel_wait_for_finish_blocking(dma_ch);
 }
 
 
