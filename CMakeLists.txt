@@ -13,7 +13,7 @@ endif()
 message("TFT_DRIVER is ${TFT_DRIVER}")
 
 if (NOT TARGET pico_tft)
-    pico_add_impl_library(pico_tft)
+    pico_add_library(pico_tft)
 
     target_include_directories(pico_tft INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
 
