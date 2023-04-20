@@ -133,25 +133,34 @@ void tft_control(uint8_t reg, uint8_t *bstr, size_t len)
 
 void tft_init(void)
 {
-	printf("tft: Arrange buffers...\n");
+	printf("tft: Allocate buffers: %i, %i, %i, %i\n",
+		tft_width * tft_height / 2,
+		tft_width * tft_height / 2,
+		tft_width * 2,
+		tft_width * 2);
+
 	buffer[0] = malloc(tft_width * tft_height / 2);
 	buffer[1] = malloc(tft_width * tft_height / 2);
 	txbuf[0] = malloc(tft_width * 2);
 	txbuf[1] = malloc(tft_width * 2);
 
+	assert (buffer[0]);
+	assert (buffer[1]);
+	assert (txbuf[0]);
+	assert (txbuf[1]);
+
 	tft_input = buffer[0];
 	tft_committed = buffer[1];
 
-	printf("tft: Configure SPI...\n");
+	unsigned rate = spi_init(TFT_SPI_DEV, TFT_BAUDRATE);
+	printf("tft: Configured SPI: rate=%u\n", rate);
 
-	uint rate = spi_init(TFT_SPI_DEV, TFT_BAUDRATE);
-	printf("tft: Baudrate: %u\n", rate);
+	printf("tft: Configure pins: cs=%i, sck=%i, mosi=%i, rs=%i, rst=%i\n",
+		TFT_CS_PIN, TFT_SCK_PIN, TFT_MOSI_PIN, TFT_RS_PIN, TFT_RST_PIN);
 
 	gpio_set_function(TFT_CS_PIN, GPIO_FUNC_SPI);
 	gpio_set_function(TFT_SCK_PIN, GPIO_FUNC_SPI);
 	gpio_set_function(TFT_MOSI_PIN, GPIO_FUNC_SPI);
-
-	printf("tft: Configure aux pins...\n");
 
 	gpio_init(TFT_RST_PIN);
 	gpio_set_dir(TFT_RST_PIN, GPIO_OUT);
@@ -159,13 +168,14 @@ void tft_init(void)
 	gpio_init(TFT_RS_PIN);
 	gpio_set_dir(TFT_RS_PIN, GPIO_OUT);
 
-	printf("tft: Configure DMA channel...\n");
 	dma_ch = dma_claim_unused_channel(true);
+	printf("tft: Configured DMA channel: %i\n", dma_ch);
+
 	dma_conf = dma_channel_get_default_config(dma_ch);
 	channel_config_set_transfer_data_size(&dma_conf, DMA_SIZE_8);
 	channel_config_set_dreq(&dma_conf, spi_get_dreq(TFT_SPI_DEV, true));
 
-	printf("tft: Reset screen...\n");
+	printf("tft: Begin reset & preflight...\n");
 
 	gpio_put(TFT_RST_PIN, 0);
 	sleep_ms(50);
@@ -173,14 +183,12 @@ void tft_init(void)
 	gpio_put(TFT_RST_PIN, 1);
 	sleep_ms(50);
 
-	printf("tft: Begin preflight...\n");
 	tft_preflight();
 
-	printf("tft: Fill screen with gray...\n");
+	printf("tft: Fill screen with gray, then black...\n");
 	tft_fill(1);
 	tft_sync();
 
-	printf("tft: Fill screen with black...\n");
 	tft_fill(0);
 	tft_sync();
 }
