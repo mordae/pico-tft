@@ -25,8 +25,8 @@
 # define HEIGHT 320
 #endif
 
-const unsigned tft_width = WIDTH;
-const unsigned tft_height = HEIGHT;
+const int tft_width = WIDTH;
+const int tft_height = HEIGHT;
 
 
 void tft_preflight(void)

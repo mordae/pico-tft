@@ -20,8 +20,8 @@
 
 
 /* TFT dimensions, driver-specific. */
-extern const unsigned tft_width;
-extern const unsigned tft_height;
+extern const int tft_width;
+extern const int tft_height;
 
 
 /*

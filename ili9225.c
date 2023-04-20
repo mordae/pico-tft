@@ -25,8 +25,8 @@
 # define HEIGHT 220
 #endif
 
-const unsigned tft_width = WIDTH;
-const unsigned tft_height = HEIGHT;
+const int tft_width = WIDTH;
+const int tft_height = HEIGHT;
 
 
 inline static void set_register(uint8_t reg, uint16_t value)
