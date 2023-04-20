@@ -1,13 +1,13 @@
 set(TFT_DRIVER "st7735" CACHE STRING "Display driver")
 set_property(CACHE TFT_DRIVER PROPERTY STRINGS st7735 ili9225)
-set(TFT_DRIVERS st7735 ili9225)
+set(TFT_DRIVERS st7735 ili9225 ili9341)
 
 if(NOT TFT_DRIVER)
     set(TFT_DRIVER st7735)
 endif()
 
 if(NOT TFT_DRIVER IN_LIST TFT_DRIVERS)
-    message(FATAL_ERROR "Invalid TFT_DRIVER=${TFT_DRIVER} (Allowed: st7735, ili9225)")
+    message(FATAL_ERROR "Invalid TFT_DRIVER=${TFT_DRIVER} (Allowed: st7735, ili9225, ili9341)")
 endif()
 
 message("TFT_DRIVER is ${TFT_DRIVER}")

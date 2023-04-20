@@ -54,7 +54,7 @@ extern uint16_t tft_palette[16];
 /*
  * Generate 16bit color from the customary 3x 8bit RGB.
  */
-inline static uint16_t tft_rgb(uint8_t r, uint8_t g, uint8_t b)
+inline static uint16_t tft_rgb(int r, int g, int b)
 {
 	r = (r >> 3) & 0b00011111;
 	g = (g >> 2) & 0b00111111;
@@ -118,7 +118,7 @@ inline static int tft_clamp(int x, int min, int max)
 /*
  * Color a single pixel.
  */
-inline static void tft_draw_pixel(uint8_t x, uint8_t y, uint8_t color)
+inline static void tft_draw_pixel(int x, int y, int color)
 {
 	x = tft_clamp(x, 0, tft_width - 1);
 	y = tft_clamp(y, 0, tft_height - 1);
@@ -138,27 +138,27 @@ inline static void tft_draw_pixel(uint8_t x, uint8_t y, uint8_t color)
 /*
  * Color a whole rect of pixels.
  */
-void tft_draw_rect(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t color);
+void tft_draw_rect(int x0, int y0, int x1, int y1, int color);
 
 
 /*
  * Paint the whole screen with a single color.
  */
-void tft_fill(uint8_t color);
+void tft_fill(int color);
 
 
 /*
  * Draw given glyph at specified coordinates.
  * The coordinates indicate bottom left of the glyph.
  */
-void tft_draw_glyph(uint8_t x, uint8_t y, uint8_t color, char c);
+void tft_draw_glyph(int x, int y, int color, char c);
 
 
 /*
  * Draw given string at specified coordinates.
  * The coordinates indicate bottom left of the string.
  */
-void tft_draw_string(uint8_t x, uint8_t y, uint8_t color, const char *str);
+void tft_draw_string(int x, int y, int color, const char *str);
 
 
 /*

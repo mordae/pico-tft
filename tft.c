@@ -252,19 +252,7 @@ void tft_swap_sync(void)
 }
 
 
-inline static int clamp(int x, int min, int max)
-{
-	if (x < min)
-		return min;
-
-	if (x > max)
-		return max;
-
-	return x;
-}
-
-
-void tft_draw_rect(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t color)
+void tft_draw_rect(int x0, int y0, int x1, int y1, int color)
 {
 	x0 = tft_clamp(x0, 0, tft_width - 1);
 	x1 = tft_clamp(x1, 0, tft_width - 1);
@@ -292,14 +280,14 @@ void tft_draw_rect(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t color
 }
 
 
-void tft_fill(uint8_t color)
+void tft_fill(int color)
 {
 	uint8_t twopix = ((color & 0b1111) << 4) | (color & 0b1111);
 	memset(tft_input, twopix, tft_width * tft_height / 2);
 }
 
 
-void tft_draw_glyph(uint8_t x, uint8_t y, uint8_t color, char c)
+void tft_draw_glyph(int x, int y, int color, char c)
 {
 	uint8_t *glyph = tft_font[(uint8_t)c];
 
@@ -313,7 +301,7 @@ void tft_draw_glyph(uint8_t x, uint8_t y, uint8_t color, char c)
 }
 
 
-void tft_draw_string(uint8_t x, uint8_t y, uint8_t color, const char *str)
+void tft_draw_string(int x, int y, int color, const char *str)
 {
 	int len = strlen(str);
 
