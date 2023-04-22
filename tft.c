@@ -74,7 +74,7 @@ uint8_t *tft_committed;
 uint8_t *tft_input;
 
 /* Damage data for the comitted buffer. */
-#define DAMAGE_Y 8
+#define DAMAGE_Y 16
 #define DAMAGE_X 16
 static int damage[DAMAGE_Y][DAMAGE_X];
 
