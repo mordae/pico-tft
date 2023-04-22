@@ -64,6 +64,7 @@ static uint8_t *buffer[2];
  * We are writing into one while the other is read by DMA.
  */
 static uint8_t *txbuf[2];
+static size_t txbuf_len = 0;
 
 
 /* Currently inactive buffer that is to be sent to the display. */
@@ -71,6 +72,11 @@ uint8_t *tft_committed;
 
 /* Current active buffer that is to be written into. */
 uint8_t *tft_input;
+
+/* Damage data for the comitted buffer. */
+#define DAMAGE_Y 8
+#define DAMAGE_X 16
+static int damage[DAMAGE_Y][DAMAGE_X];
 
 /* Font data. */
 extern uint8_t tft_font[256][16];
@@ -83,7 +89,8 @@ static dma_channel_config dma_conf;
 
 /* Implemented by the driver. */
 extern void tft_preflight(void);
-extern void tft_begin_sync(void);
+extern void tft_begin_sync(int x0, int y0, int x1, int y1);
+extern const bool tft_with_damage;
 
 
 inline static void select_register(void)
@@ -141,8 +148,17 @@ void tft_init(void)
 
 	buffer[0] = malloc(tft_width * tft_height / 2);
 	buffer[1] = malloc(tft_width * tft_height / 2);
-	txbuf[0] = malloc(tft_width * 2);
-	txbuf[1] = malloc(tft_width * 2);
+
+	if (tft_with_damage) {
+		const int ystride = (tft_height + DAMAGE_Y - 1) / DAMAGE_Y;
+		const int xstride = (tft_width + DAMAGE_X - 1) / DAMAGE_X;
+		txbuf_len = ystride * xstride * 2;
+	} else {
+		txbuf_len = tft_width * 2;
+	}
+
+	txbuf[0] = malloc(txbuf_len);
+	txbuf[1] = malloc(txbuf_len);
 
 	assert (buffer[0]);
 	assert (buffer[1]);
@@ -185,11 +201,10 @@ void tft_init(void)
 
 	tft_preflight();
 
-	printf("tft: Fill screen with gray, then black...\n");
-	tft_fill(1);
-	tft_sync();
-
+	printf("tft: Fill screen with black...\n");
 	tft_fill(0);
+	tft_swap_buffers();
+	memset(damage, 255, sizeof(damage));
 	tft_sync();
 }
 
@@ -206,6 +221,95 @@ inline static uint8_t low(uint8_t x)
 }
 
 
+static void save_damage(void)
+{
+	memset(damage, 0, sizeof(damage));
+
+	const int ystride = (tft_height + DAMAGE_Y - 1) / DAMAGE_Y;
+	const int xstride = (tft_width + DAMAGE_X - 1) / DAMAGE_X;
+
+	for (int y = 0; y < tft_height; y++) {
+		int dy = y / ystride;
+
+		for (int dx = 0; dx < DAMAGE_X; dx++) {
+			int x = dx * xstride;
+			int xlen = x + xstride > tft_width ? tft_width - x : xstride;
+
+			int c = memcmp(tft_input + (tft_width * y + x) / 2,
+			               tft_committed + (tft_width * y + x) / 2,
+			               xlen / 2);
+
+			damage[dy][dx] |= (0 != c);
+		}
+	}
+}
+
+
+static void sync_damaged(void)
+{
+	int bufno = 0;
+
+	const int ystride = (tft_height + DAMAGE_Y - 1) / DAMAGE_Y;
+	const int xstride = (tft_width + DAMAGE_X - 1) / DAMAGE_X;
+
+	for (int dy = 0; dy < DAMAGE_Y; dy++) {
+		for (int dx = 0; dx < DAMAGE_X; dx++) {
+			if (!damage[dy][dx])
+				continue;
+
+			int y0 = dy * ystride;
+			int y1 = (dy + 1) * ystride;
+
+			if (y1 > tft_height)
+				y1 = tft_height;
+
+			int x0 = dx * xstride;
+			int x1 = (dx + 1) * xstride;
+
+			if (x1 > tft_width)
+				x1 = tft_width;
+
+			uint8_t *buf = txbuf[bufno & 1];
+			bufno = !bufno;
+
+			size_t size = 0;
+
+			for (int y = y0; y < y1; y++) {
+				for (int x = x0; x < x1; x += 2) {
+					int tpa = y * tft_width / 2 + x / 2;
+					uint8_t twopix = tft_committed[tpa];
+
+					uint16_t left  = tft_palette[(twopix >> 4) & 0b1111];
+					uint16_t right = tft_palette[twopix & 0b1111];
+
+					buf[size++] = left >> 8;
+					buf[size++] = left;
+					buf[size++] = right >> 8;
+					buf[size++] = right;
+				}
+			}
+
+			/* Wait for the previous transfer to complete. */
+			dma_channel_wait_for_finish_blocking(dma_ch);
+
+			/* Establish correct position. */
+			tft_begin_sync(x0, y0, x1 - 1, y1 - 1);
+
+			/* Send the buffer out while we prepare the next one. */
+			write_buffer_dma(buf, size);
+
+			/*
+			 * FIXME: This is needed to prevent display artifacts
+			 *        for some reason, but it prevents concurrency.
+			 */
+			dma_channel_wait_for_finish_blocking(dma_ch);
+		}
+	}
+
+	dma_channel_wait_for_finish_blocking(dma_ch);
+}
+
+
 void tft_swap_buffers(void)
 {
 	uint8_t *tmp;
@@ -213,12 +317,20 @@ void tft_swap_buffers(void)
 	tmp           = tft_committed;
 	tft_committed = tft_input;
 	tft_input     = tmp;
+
+	if (tft_with_damage)
+		save_damage();
 }
 
 
 void tft_sync(void)
 {
-	tft_begin_sync();
+	if (tft_with_damage) {
+		sync_damaged();
+		return;
+	}
+
+	tft_begin_sync(0, 0, tft_width - 1, tft_height - 1);
 
 	for (int y = 0; y < tft_height; y++) {
 		uint8_t *buf = txbuf[y & 1];

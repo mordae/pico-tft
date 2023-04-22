@@ -26,6 +26,7 @@
 
 const int tft_width = WIDTH;
 const int tft_height = HEIGHT;
+const bool tft_with_damage = true;
 
 
 void tft_preflight(void)
@@ -54,15 +55,25 @@ void tft_preflight(void)
 }
 
 
-void tft_begin_sync(void)
+void tft_begin_sync(int x0, int y0, int x1, int y1)
 {
 	/* 10.1.19 CASET: Column Address Set */
-	uint8_t caset[] = {0, 0, 0, WIDTH - 1};
+	uint8_t caset[] = {
+		(x0 >> 8) & 0xff,
+		(x0 >> 0) & 0xff,
+		(x1 >> 8) & 0xff,
+		(x1 >> 0) & 0xff,
+	};
 	tft_control(0x2a, caset, 4);
 
 	/* 10.1.20 RASET: Row Address Set */
-	uint8_t raset[] = {0, 0, 0, HEIGHT - 1};
-	tft_control(0x2b, raset, 4);
+	uint8_t paset[] = {
+		(y0 >> 8) & 0xff,
+		(y0 >> 0) & 0xff,
+		(y1 >> 8) & 0xff,
+		(y1 >> 0) & 0xff,
+	};
+	tft_control(0x2b, paset, 4);
 
 	/* 10.1.21 RAMWR: Memory Write */
 	tft_control(0x2c, NULL, 0);

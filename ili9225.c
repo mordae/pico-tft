@@ -27,6 +27,7 @@
 
 const int tft_width = WIDTH;
 const int tft_height = HEIGHT;
+const bool tft_with_damage = false;
 
 
 inline static void set_register(uint8_t reg, uint16_t value)
@@ -106,11 +107,11 @@ void tft_preflight(void)
 }
 
 
-void tft_begin_sync(void)
+void tft_begin_sync(int x0, int y0, int x1, int y1)
 {
 	/* Home the GRAM Address Counter. */
-	set_register(0x20, 0);
-	set_register(0x21, 0);
+	set_register(0x20, x0);
+	set_register(0x21, y0);
 
 	/* Activate GRAM write register. */
 	tft_control(0x22, NULL, 0);
