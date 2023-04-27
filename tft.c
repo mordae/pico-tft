@@ -108,7 +108,9 @@ static void transmit_blocking(const void *buf, size_t len)
 {
 	dma_channel_wait_for_finish_blocking(dma_ch);
 	size_t wr = spi_write_blocking(TFT_SPI_DEV, buf, len);
-	assert (len == wr);
+
+	if (wr < len)
+		panic("tft: transmit_blocking: written < len");
 }
 
 
@@ -160,10 +162,8 @@ void tft_init(void)
 	txbuf[0] = malloc(txbuf_len);
 	txbuf[1] = malloc(txbuf_len);
 
-	assert (buffer[0]);
-	assert (buffer[1]);
-	assert (txbuf[0]);
-	assert (txbuf[1]);
+	if ((!buffer[0]) || (!buffer[1]) || (!txbuf[0]) || (!txbuf[1]))
+		panic("tft: tft_init: malloc failed");
 
 	tft_input = buffer[0];
 	tft_committed = buffer[1];
