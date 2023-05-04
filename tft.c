@@ -79,7 +79,7 @@ uint8_t *tft_input;
 static int damage[DAMAGE_Y][DAMAGE_X];
 
 /* Font data. */
-extern uint8_t tft_font[256][16];
+extern uint8_t tft_font[256 * 16];
 
 
 /* DMA channel to use for transmit. */
@@ -401,7 +401,7 @@ void tft_fill(int color)
 
 void tft_draw_glyph(int x, int y, int color, char c)
 {
-	uint8_t *glyph = tft_font[(uint8_t)c];
+	uint8_t *glyph = tft_font + (size_t)c * 16;
 
 	for (int gx = 0; gx < 8; gx++) {
 		for (int gy = 0; gy < 16; gy++) {

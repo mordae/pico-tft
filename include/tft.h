@@ -67,7 +67,7 @@ inline static uint16_t tft_rgb(int r, int g, int b)
  * Modified latin 16x8 bitmap font.
  * Populate it with tft_load_font().
  */
-extern uint8_t tft_font[256][16];
+extern uint8_t tft_font[256 * 16];
 
 
 /*
