@@ -420,3 +420,25 @@ void tft_draw_string(int x, int y, int color, const char *str)
 	for (int i = 0; i < len; i++)
 		tft_draw_glyph(x + i * 8, y, color, str[i]);
 }
+
+
+void tft_draw_string_right(int x, int y, int color, const char *str)
+{
+	int len = strlen(str);
+
+	x -= len * 8;
+
+	for (int i = 0; i < len; i++)
+		tft_draw_glyph(x + i * 8, y, color, str[i]);
+}
+
+
+void tft_draw_string_center(int x, int y, int color, const char *str)
+{
+	int len = strlen(str);
+
+	x -= len * 4;
+
+	for (int i = 0; i < len; i++)
+		tft_draw_glyph(x + i * 8, y, color, str[i]);
+}

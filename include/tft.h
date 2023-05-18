@@ -156,9 +156,14 @@ void tft_draw_glyph(int x, int y, int color, char c);
 
 /*
  * Draw given string at specified coordinates.
- * The coordinates indicate bottom left of the string.
+ *
+ * The coordinates indicate bottom left of the string for the tft_draw_string,
+ * bottom right for the tft_draw_string_right and bottom center for the
+ * tft_draw_string_center.
  */
 void tft_draw_string(int x, int y, int color, const char *str);
+void tft_draw_string_right(int x, int y, int color, const char *str);
+void tft_draw_string_center(int x, int y, int color, const char *str);
 
 
 /*
