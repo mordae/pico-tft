@@ -107,7 +107,7 @@ void tft_preflight(void)
 }
 
 
-void tft_begin_sync(int x0, int y0, int x1, int y1)
+void tft_begin_sync(int x0, int y0, int, int)
 {
 	/* Home the GRAM Address Counter. */
 	set_register(0x20, x0);
