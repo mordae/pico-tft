@@ -26,7 +26,6 @@
 
 const int tft_width = WIDTH;
 const int tft_height = HEIGHT;
-const bool tft_with_damage = false;
 
 inline static void set_register(uint8_t reg, uint16_t value)
 {
@@ -99,14 +98,17 @@ void tft_preflight(void)
 	sleep_ms(50);
 
 	set_register(0x07, 0x1017); // TEMON=1, GON=1, CL=1, REV=1, D=11
+
+	/* 8.2.18 RAM Address Set */
+	int pw = TFT_SWAP_XY ? tft_height : tft_width;
+	int ph = TFT_SWAP_XY ? tft_width : tft_height;
+
+	set_register(0x20, TFT_FLIP_Y ? 0 : pw - 1);
+	set_register(0x21, TFT_FLIP_X ? ph - 1 : 0);
 }
 
-void tft_begin_sync(int x0, int y0, int, int)
+void tft_begin_sync(void)
 {
-	/* Home the GRAM Address Counter. */
-	set_register(0x20, x0);
-	set_register(0x21, y0);
-
 	/* Activate GRAM write register. */
 	tft_control(0x22, NULL, 0);
 }

@@ -43,5 +43,4 @@ Highlights:
 
 - There is a basic 8×16 ready-to-use font embedded.
 - Double buffering is in place to improve performance.
-- 16 color palette is used to save space.
-- Buffers for ili9225 use about 40k RAM, but deliver over 60 FPS.
+- 256 color palette is used to save space.

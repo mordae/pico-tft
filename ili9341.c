@@ -26,7 +26,6 @@
 
 const int tft_width = WIDTH;
 const int tft_height = HEIGHT;
-const bool tft_with_damage = true;
 
 void tft_preflight(void)
 {
@@ -54,28 +53,18 @@ void tft_preflight(void)
 	/* 8.3.8 ETMOD: Entry Mode Set */
 	uint8_t etmod = 0x07;
 	tft_control(0xb7, &etmod, 1);
-}
 
-void tft_begin_sync(int x0, int y0, int x1, int y1)
-{
 	/* 8.2.20 CASET: Column Address Set */
-	uint8_t caset[] = {
-		(x0 >> 8) & 0xff,
-		(x0 >> 0) & 0xff,
-		(x1 >> 8) & 0xff,
-		(x1 >> 0) & 0xff,
-	};
+	uint8_t caset[] = { 0, 0, tft_width >> 8, tft_width & 0xff };
 	tft_control(0x2a, caset, 4);
 
 	/* 8.2.21 PASET: Page Address Set */
-	uint8_t paset[] = {
-		(y0 >> 8) & 0xff,
-		(y0 >> 0) & 0xff,
-		(y1 >> 8) & 0xff,
-		(y1 >> 0) & 0xff,
-	};
+	uint8_t paset[] = { 0, 0, tft_height >> 8, tft_height & 0xff };
 	tft_control(0x2b, paset, 4);
+}
 
+void tft_begin_sync(void)
+{
 	/* 8.2.22 RAMWR: Memory Write */
 	tft_control(0x2c, NULL, 0);
 }
