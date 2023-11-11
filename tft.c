@@ -144,8 +144,6 @@ void tft_init(void)
 	tft_input = buffer[0];
 	tft_committed = buffer[1];
 
-	printf("tft: Initialize default palette");
-
 	unsigned rate = spi_init(TFT_SPI_DEV, TFT_BAUDRATE);
 	printf("tft: Configured SPI: rate=%u\n", rate);
 
