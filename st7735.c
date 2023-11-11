@@ -24,8 +24,8 @@
 #define HEIGHT 160
 #endif
 
-const int tft_width = WIDTH;
-const int tft_height = HEIGHT;
+const int tft_width = WIDTH / TFT_SCALE;
+const int tft_height = HEIGHT / TFT_SCALE;
 
 void tft_preflight(void)
 {
@@ -50,11 +50,11 @@ void tft_preflight(void)
 	sleep_ms(120);
 
 	/* 10.1.19 CASET: Column Address Set */
-	uint8_t caset[] = { 0, 0, tft_width >> 8, tft_width & 0xff };
+	uint8_t caset[] = { 0, 0, WIDTH >> 8, WIDTH & 0xff };
 	tft_control(0x2a, caset, 4);
 
 	/* 10.1.20 RASET: Row Address Set */
-	uint8_t paset[] = { 0, 0, tft_height >> 8, tft_height & 0xff };
+	uint8_t paset[] = { 0, 0, HEIGHT >> 8, HEIGHT & 0xff };
 	tft_control(0x2b, paset, 4);
 }
 

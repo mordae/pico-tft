@@ -24,8 +24,8 @@
 #define HEIGHT 220
 #endif
 
-const int tft_width = WIDTH;
-const int tft_height = HEIGHT;
+const int tft_width = WIDTH / TFT_SCALE;
+const int tft_height = HEIGHT / TFT_SCALE;
 
 inline static void set_register(uint8_t reg, uint16_t value)
 {
@@ -100,8 +100,8 @@ void tft_preflight(void)
 	set_register(0x07, 0x1017); // TEMON=1, GON=1, CL=1, REV=1, D=11
 
 	/* 8.2.18 RAM Address Set */
-	int pw = TFT_SWAP_XY ? tft_height : tft_width;
-	int ph = TFT_SWAP_XY ? tft_width : tft_height;
+	int pw = TFT_SWAP_XY ? HEIGHT : WIDTH;
+	int ph = TFT_SWAP_XY ? WIDTH : HEIGHT;
 
 	set_register(0x20, TFT_FLIP_Y ? 0 : pw - 1);
 	set_register(0x21, TFT_FLIP_X ? ph - 1 : 0);

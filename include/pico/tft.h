@@ -15,8 +15,13 @@
  */
 
 #pragma once
-
 #include <pico/stdlib.h>
+
+#if !defined(TFT_SCALE)
+#define TFT_SCALE 1
+#elif (TFT_SCALE != 1) && (TFT_SCALE != 2) && (TFT_SCALE != 4)
+#error TFT_SCALE must be 1, 2, or 4
+#endif
 
 /* TFT dimensions, driver-specific. */
 extern const int tft_width;

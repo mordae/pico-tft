@@ -38,7 +38,6 @@ static uint8_t *buffer[2];
  * We are writing into one while the other is read by DMA.
  */
 static uint16_t *txbuf[2];
-static size_t txbuf_len = 0;
 
 /* Currently inactive buffer that is to be sent to the display. */
 uint8_t *tft_committed;
@@ -127,13 +126,14 @@ void tft_control(uint8_t reg, uint8_t *bstr, size_t len)
 
 void tft_init(void)
 {
-	printf("tft: Allocate buffers: %i, %i, %i, %i\n", tft_width * tft_height,
-	       tft_width * tft_height, tft_width * 2, tft_width * 2);
+	int framebuf_len = tft_width * tft_height;
+	int txbuf_len = tft_width * 2 * TFT_SCALE;
 
-	buffer[0] = malloc(tft_width * tft_height);
-	buffer[1] = malloc(tft_width * tft_height);
+	printf("tft: Allocate buffers: %i, %i, %i, %i\n", framebuf_len, framebuf_len, txbuf_len,
+	       txbuf_len);
 
-	txbuf_len = tft_width * 2;
+	buffer[0] = malloc(framebuf_len);
+	buffer[1] = malloc(framebuf_len);
 
 	txbuf[0] = malloc(txbuf_len);
 	txbuf[1] = malloc(txbuf_len);
@@ -200,15 +200,20 @@ void tft_sync(void)
 
 	for (int y = 0; y < tft_height; y++) {
 		uint16_t *buf = txbuf[y & 1];
+		uint16_t *bufptr = buf;
 
 		for (int x = 0; x < tft_width; x++) {
 			int i = y * tft_width + x;
 			uint16_t color = tft_palette[tft_committed[i]];
-			buf[x] = __builtin_bswap16(color);
+
+			for (int i = 0; i < TFT_SCALE; i++)
+				*bufptr++ = __builtin_bswap16(color);
 		}
 
-		/* Send the buffer out while we prepare the next one. */
-		write_buffer_dma(buf, tft_width * 2);
+		for (int i = 0; i < TFT_SCALE; i++) {
+			dma_channel_wait_for_finish_blocking(dma_ch);
+			write_buffer_dma(buf, tft_width * 2 * TFT_SCALE);
+		}
 	}
 
 	dma_channel_wait_for_finish_blocking(dma_ch);
