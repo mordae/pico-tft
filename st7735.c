@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <pico/tft.h>
+#include <tft.h>
 
 #if TFT_SWAP_XY
 #define WIDTH 160

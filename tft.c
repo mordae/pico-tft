@@ -15,7 +15,7 @@
  */
 
 #include <pico/stdlib.h>
-#include <pico/tft.h>
+#include <tft.h>
 #include <hardware/spi.h>
 #include <hardware/dma.h>
 
