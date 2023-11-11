@@ -14,16 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <tft.h>
-
 #include <pico/stdlib.h>
+#include <pico/tft.h>
 #include <hardware/spi.h>
 #include <hardware/dma.h>
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
 
 uint16_t tft_palette[16] = {
 	0b0000000000000000, /* black */
@@ -48,7 +46,6 @@ uint16_t tft_palette[16] = {
 	0b1000100000010001, /* dark purple */
 };
 
-
 /*
  * We are using double buffering.
  *
@@ -66,7 +63,6 @@ static uint8_t *buffer[2];
 static uint8_t *txbuf[2];
 static size_t txbuf_len = 0;
 
-
 /* Currently inactive buffer that is to be sent to the display. */
 uint8_t *tft_committed;
 
@@ -81,17 +77,14 @@ static int damage[DAMAGE_Y][DAMAGE_X];
 /* Font data. */
 extern uint8_t tft_font[256 * 16];
 
-
 /* DMA channel to use for transmit. */
 static int dma_ch;
 static dma_channel_config dma_conf;
-
 
 /* Implemented by the driver. */
 extern void tft_preflight(void);
 extern void tft_begin_sync(int x0, int y0, int x1, int y1);
 extern const bool tft_with_damage;
-
 
 inline static void select_register(void)
 {
@@ -103,7 +96,6 @@ inline static void select_data(void)
 	gpio_put(TFT_RS_PIN, 1);
 }
 
-
 static void transmit_blocking(const void *buf, size_t len)
 {
 	dma_channel_wait_for_finish_blocking(dma_ch);
@@ -113,22 +105,17 @@ static void transmit_blocking(const void *buf, size_t len)
 		panic("tft: transmit_blocking: written < len");
 }
 
-
 static void transmit_dma(const void *buf, size_t len)
 {
 	dma_channel_wait_for_finish_blocking(dma_ch);
-	dma_channel_configure(dma_ch, &dma_conf,
-			&spi_get_hw(TFT_SPI_DEV)->dr,
-			buf, len, true);
+	dma_channel_configure(dma_ch, &dma_conf, &spi_get_hw(TFT_SPI_DEV)->dr, buf, len, true);
 }
-
 
 static void write_buffer_dma(uint8_t *bstr, size_t len)
 {
 	select_data();
 	transmit_dma(bstr, len);
 }
-
 
 void tft_control(uint8_t reg, uint8_t *bstr, size_t len)
 {
@@ -139,14 +126,10 @@ void tft_control(uint8_t reg, uint8_t *bstr, size_t len)
 	transmit_blocking(bstr, len);
 }
 
-
 void tft_init(void)
 {
-	printf("tft: Allocate buffers: %i, %i, %i, %i\n",
-		tft_width * tft_height / 2,
-		tft_width * tft_height / 2,
-		tft_width * 2,
-		tft_width * 2);
+	printf("tft: Allocate buffers: %i, %i, %i, %i\n", tft_width * tft_height / 2,
+	       tft_width * tft_height / 2, tft_width * 2, tft_width * 2);
 
 	buffer[0] = malloc(tft_width * tft_height / 2);
 	buffer[1] = malloc(tft_width * tft_height / 2);
@@ -171,8 +154,8 @@ void tft_init(void)
 	unsigned rate = spi_init(TFT_SPI_DEV, TFT_BAUDRATE);
 	printf("tft: Configured SPI: rate=%u\n", rate);
 
-	printf("tft: Configure pins: cs=%i, sck=%i, mosi=%i, rs=%i, rst=%i\n",
-		TFT_CS_PIN, TFT_SCK_PIN, TFT_MOSI_PIN, TFT_RS_PIN, TFT_RST_PIN);
+	printf("tft: Configure pins: cs=%i, sck=%i, mosi=%i, rs=%i, rst=%i\n", TFT_CS_PIN,
+	       TFT_SCK_PIN, TFT_MOSI_PIN, TFT_RS_PIN, TFT_RST_PIN);
 
 	gpio_set_function(TFT_CS_PIN, GPIO_FUNC_SPI);
 	gpio_set_function(TFT_SCK_PIN, GPIO_FUNC_SPI);
@@ -208,18 +191,15 @@ void tft_init(void)
 	tft_sync();
 }
 
-
 inline static uint8_t high(uint8_t x)
 {
 	return (x >> 4) & 0b1111;
 }
 
-
 inline static uint8_t low(uint8_t x)
 {
 	return x & 0b1111;
 }
-
 
 static void save_damage(void)
 {
@@ -236,14 +216,12 @@ static void save_damage(void)
 			int xlen = x + xstride > tft_width ? tft_width - x : xstride;
 
 			int c = memcmp(tft_input + (tft_width * y + x) / 2,
-			               tft_committed + (tft_width * y + x) / 2,
-			               xlen / 2);
+				       tft_committed + (tft_width * y + x) / 2, xlen / 2);
 
 			damage[dy][dx] |= (0 != c);
 		}
 	}
 }
-
 
 static void sync_damaged(void)
 {
@@ -279,7 +257,7 @@ static void sync_damaged(void)
 					int tpa = y * tft_width / 2 + x / 2;
 					uint8_t twopix = tft_committed[tpa];
 
-					uint16_t left  = tft_palette[(twopix >> 4) & 0b1111];
+					uint16_t left = tft_palette[(twopix >> 4) & 0b1111];
 					uint16_t right = tft_palette[twopix & 0b1111];
 
 					buf[size++] = left >> 8;
@@ -309,19 +287,17 @@ static void sync_damaged(void)
 	dma_channel_wait_for_finish_blocking(dma_ch);
 }
 
-
 void tft_swap_buffers(void)
 {
 	uint8_t *tmp;
 
-	tmp           = tft_committed;
+	tmp = tft_committed;
 	tft_committed = tft_input;
-	tft_input     = tmp;
+	tft_input = tmp;
 
 	if (tft_with_damage)
 		save_damage();
 }
-
 
 void tft_sync(void)
 {
@@ -338,7 +314,7 @@ void tft_sync(void)
 		for (int x = 0; x < tft_width >> 1; x++) {
 			uint8_t twopix = tft_committed[y * (tft_width >> 1) + x];
 
-			uint16_t left  = tft_palette[(twopix >> 4) & 0b1111];
+			uint16_t left = tft_palette[(twopix >> 4) & 0b1111];
 			uint16_t right = tft_palette[twopix & 0b1111];
 
 			size_t base = x << 2;
@@ -356,13 +332,11 @@ void tft_sync(void)
 	dma_channel_wait_for_finish_blocking(dma_ch);
 }
 
-
 void tft_swap_sync(void)
 {
 	tft_swap_buffers();
 	tft_sync();
 }
-
 
 void tft_draw_rect(int x0, int y0, int x1, int y1, int color)
 {
@@ -391,13 +365,11 @@ void tft_draw_rect(int x0, int y0, int x1, int y1, int color)
 	}
 }
 
-
 void tft_fill(int color)
 {
 	uint8_t twopix = ((color & 0b1111) << 4) | (color & 0b1111);
 	memset(tft_input, twopix, tft_width * tft_height / 2);
 }
-
 
 void tft_draw_glyph(int x, int y, int color, char c)
 {
@@ -412,7 +384,6 @@ void tft_draw_glyph(int x, int y, int color, char c)
 	}
 }
 
-
 void tft_draw_string(int x, int y, int color, const char *str)
 {
 	int len = strlen(str);
@@ -420,7 +391,6 @@ void tft_draw_string(int x, int y, int color, const char *str)
 	for (int i = 0; i < len; i++)
 		tft_draw_glyph(x + i * 8, y, color, str[i]);
 }
-
 
 void tft_draw_string_right(int x, int y, int color, const char *str)
 {
@@ -431,7 +401,6 @@ void tft_draw_string_right(int x, int y, int color, const char *str)
 	for (int i = 0; i < len; i++)
 		tft_draw_glyph(x + i * 8, y, color, str[i]);
 }
-
 
 void tft_draw_string_center(int x, int y, int color, const char *str)
 {

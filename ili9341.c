@@ -14,21 +14,19 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <tft.h>
-
+#include <pico/tft.h>
 
 #if TFT_SWAP_XY
-# define WIDTH 320
-# define HEIGHT 240
+#define WIDTH 320
+#define HEIGHT 240
 #else
-# define WIDTH 240
-# define HEIGHT 320
+#define WIDTH 240
+#define HEIGHT 320
 #endif
 
 const int tft_width = WIDTH;
 const int tft_height = HEIGHT;
 const bool tft_with_damage = true;
-
 
 void tft_preflight(void)
 {
@@ -41,14 +39,12 @@ void tft_preflight(void)
 	sleep_ms(120);
 
 	/* 8.2.6 MADCTL: Memory Access Data Control */
-	uint8_t madctl = (TFT_SWAP_XY << 5)
-	               | (TFT_FLIP_X  << 6)
-	               | (TFT_FLIP_Y  << 7)
-		       | (1 << 3) /* BGR swap */;
+	uint8_t madctl = (TFT_SWAP_XY << 5) | (TFT_FLIP_X << 6) | (TFT_FLIP_Y << 7) |
+			 (1 << 3) /* BGR swap */;
 	tft_control(0x36, &madctl, 1);
 
 	/* 8.2.33 COLMOD: Interface Pixel Format */
-	uint8_t colmod = 0x6d;  /* 16 bits in 565 format */
+	uint8_t colmod = 0x6d; /* 16 bits in 565 format */
 	tft_control(0x3a, &colmod, 1);
 
 	/* 8.2.19 DISPON: Display On */
@@ -59,7 +55,6 @@ void tft_preflight(void)
 	uint8_t etmod = 0x07;
 	tft_control(0xb7, &etmod, 1);
 }
-
 
 void tft_begin_sync(int x0, int y0, int x1, int y1)
 {
