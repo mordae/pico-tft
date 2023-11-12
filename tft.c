@@ -240,7 +240,6 @@ void tft_draw_rect(int x0, int y0, int x1, int y1, int color)
 	x1 = tft_clamp(x1, 0, tft_width - 1);
 	y0 = tft_clamp(y0, 0, tft_height - 1);
 	y1 = tft_clamp(y1, 0, tft_height - 1);
-	color = tft_clamp(color, 0, 0x0f);
 
 	if (x0 > x1) {
 		int tmp = x0;
