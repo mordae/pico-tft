@@ -23,6 +23,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#if !defined(TFT_RST_DELAY)
+#define TFT_RST_DELAY 50
+#endif
+
 /*
  * We are using double buffering.
  *
@@ -170,10 +174,10 @@ void tft_init(void)
 	printf("tft: Begin reset & preflight...\n");
 
 	gpio_put(TFT_RST_PIN, 0);
-	sleep_ms(50);
+	sleep_ms(TFT_RST_DELAY);
 
 	gpio_put(TFT_RST_PIN, 1);
-	sleep_ms(50);
+	sleep_ms(TFT_RST_DELAY);
 
 	tft_preflight();
 
