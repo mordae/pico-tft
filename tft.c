@@ -109,24 +109,17 @@ __weak void tft_dma_channel_wait_for_finish_blocking(int dma_ch)
 
 static void transmit_blocking(const void *buf, size_t len)
 {
-	tft_dma_channel_wait_for_finish_blocking(dma_ch);
-
 	size_t wr = spi_write_blocking(TFT_SPI_DEV, buf, len);
 
 	if (wr < len)
 		panic("tft: transmit_blocking: written < len");
 }
 
-static void transmit_dma(const void *buf, size_t len)
-{
-	tft_dma_channel_wait_for_finish_blocking(dma_ch);
-	dma_channel_configure(dma_ch, &dma_conf, &spi_get_hw(TFT_SPI_DEV)->dr, buf, len, true);
-}
-
 static void write_buffer_dma(void *bstr, size_t len)
 {
+	tft_dma_channel_wait_for_finish_blocking(dma_ch);
 	select_data();
-	transmit_dma(bstr, len);
+	dma_channel_configure(dma_ch, &dma_conf, &spi_get_hw(TFT_SPI_DEV)->dr, bstr, len, true);
 }
 
 void tft_control(uint8_t reg, uint8_t *bstr, size_t len)
@@ -222,10 +215,8 @@ void tft_sync(void)
 				*bufptr++ = __builtin_bswap16(color);
 		}
 
-		for (int i = 0; i < TFT_SCALE; i++) {
-			tft_dma_channel_wait_for_finish_blocking(dma_ch);
+		for (int i = 0; i < TFT_SCALE; i++)
 			write_buffer_dma(buf, tft_width * 2 * TFT_SCALE);
-		}
 	}
 
 	tft_dma_channel_wait_for_finish_blocking(dma_ch);
