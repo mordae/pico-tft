@@ -27,6 +27,10 @@
 #define TFT_RST_DELAY 50
 #endif
 
+#if !defined(__weak)
+#define __weak __attribute__((__weak__))
+#endif
+
 /*
  * We are using double buffering.
  *
@@ -98,9 +102,15 @@ inline static void select_data(void)
 	gpio_put(TFT_RS_PIN, 1);
 }
 
-static void transmit_blocking(const void *buf, size_t len)
+__weak void tft_dma_channel_wait_for_finish_blocking(int dma_ch)
 {
 	dma_channel_wait_for_finish_blocking(dma_ch);
+}
+
+static void transmit_blocking(const void *buf, size_t len)
+{
+	tft_dma_channel_wait_for_finish_blocking(dma_ch);
+
 	size_t wr = spi_write_blocking(TFT_SPI_DEV, buf, len);
 
 	if (wr < len)
@@ -109,7 +119,7 @@ static void transmit_blocking(const void *buf, size_t len)
 
 static void transmit_dma(const void *buf, size_t len)
 {
-	dma_channel_wait_for_finish_blocking(dma_ch);
+	tft_dma_channel_wait_for_finish_blocking(dma_ch);
 	dma_channel_configure(dma_ch, &dma_conf, &spi_get_hw(TFT_SPI_DEV)->dr, buf, len, true);
 }
 
@@ -213,12 +223,12 @@ void tft_sync(void)
 		}
 
 		for (int i = 0; i < TFT_SCALE; i++) {
-			dma_channel_wait_for_finish_blocking(dma_ch);
+			tft_dma_channel_wait_for_finish_blocking(dma_ch);
 			write_buffer_dma(buf, tft_width * 2 * TFT_SCALE);
 		}
 	}
 
-	dma_channel_wait_for_finish_blocking(dma_ch);
+	tft_dma_channel_wait_for_finish_blocking(dma_ch);
 }
 
 void tft_swap_sync(void)

@@ -66,7 +66,7 @@ extern uint8_t *tft_input;
 /*
  * Color a single pixel.
  */
-inline static void tft_draw_pixel(int x, int y, int color)
+inline static void __unused tft_draw_pixel(int x, int y, int color)
 {
 	if ((x >= tft_width) || (x < 0))
 		return;
@@ -109,3 +109,9 @@ void tft_draw_string_center(int x, int y, int color, const char *str);
  * Write directly into a control register.
  */
 void tft_control(uint8_t reg, uint8_t *bstr, size_t len);
+
+/*
+ * Weak symbol that can be replaced with a version that yields to
+ * other tasks while the DMA transfer is pending.
+ */
+void tft_dma_channel_wait_for_finish_blocking(int dma_ch);
