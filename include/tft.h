@@ -15,6 +15,10 @@
  */
 
 #pragma once
+#define TFT_DRIVER_ST7735 1
+#define TFT_DRIVER_ILI9225 2
+#define TFT_DRIVER_ILI9341 3
+
 #include <pico/stdlib.h>
 
 #if !defined(TFT_SCALE)
@@ -23,9 +27,28 @@
 #error TFT_SCALE must be 1, 2, or 4
 #endif
 
-/* TFT dimensions, driver-specific. */
-extern const int tft_width;
-extern const int tft_height;
+#if !defined(TFT_SWAP_XY)
+#define TFT_SWAP_XY 0
+#endif
+
+#if TFT_DRIVER == TFT_DRIVER_ST7735
+#define TFT_RAW_WIDTH 128
+#define TFT_RAW_HEIGHT 160
+#elif TFT_DRIVER == TFT_DRIVER_ILI9225
+#define TFT_RAW_WIDTH 176
+#define TFT_RAW_HEIGHT 220
+#elif TFT_DRIVER == TFT_DRIVER_ILI9341
+#define TFT_RAW_WIDTH 240
+#define TFT_RAW_HEIGHT 320
+#endif
+
+#if TFT_SWAP_XY
+#define TFT_WIDTH (int)(TFT_RAW_HEIGHT / TFT_SCALE)
+#define TFT_HEIGHT (int)(TFT_RAW_WIDTH / TFT_SCALE)
+#else
+#define TFT_WIDTH (int)(TFT_RAW_WIDTH / TFT_SCALE)
+#define TFT_HEIGHT (int)(TFT_RAW_HEIGHT / TFT_SCALE)
+#endif
 
 /*
  * Modified latin 16x8 bitmap font.
@@ -68,13 +91,13 @@ extern uint8_t *tft_input;
  */
 inline static void __unused tft_draw_pixel(int x, int y, int color)
 {
-	if ((x >= tft_width) || (x < 0))
+	if ((x >= TFT_WIDTH) || (x < 0))
 		return;
 
-	if ((y >= tft_height) || (y < 0))
+	if ((y >= TFT_HEIGHT) || (y < 0))
 		return;
 
-	int i = y * tft_width + x;
+	int i = y * TFT_WIDTH + x;
 	tft_input[i] = color;
 }
 

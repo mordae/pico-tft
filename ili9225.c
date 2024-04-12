@@ -16,16 +16,7 @@
 
 #include <tft.h>
 
-#if TFT_SWAP_XY
-#define WIDTH 220
-#define HEIGHT 176
-#else
-#define WIDTH 176
-#define HEIGHT 220
-#endif
-
-const int tft_width = WIDTH / TFT_SCALE;
-const int tft_height = HEIGHT / TFT_SCALE;
+#if TFT_DRIVER == TFT_DRIVER_ILI9225
 
 inline static void set_register(uint8_t reg, uint16_t value)
 {
@@ -100,11 +91,8 @@ void tft_preflight(void)
 	set_register(0x07, 0x1017); // TEMON=1, GON=1, CL=1, REV=1, D=11
 
 	/* 8.2.18 RAM Address Set */
-	int pw = TFT_SWAP_XY ? HEIGHT : WIDTH;
-	int ph = TFT_SWAP_XY ? WIDTH : HEIGHT;
-
-	set_register(0x20, TFT_FLIP_Y ? 0 : pw - 1);
-	set_register(0x21, TFT_FLIP_X ? ph - 1 : 0);
+	set_register(0x20, TFT_FLIP_Y ? 0 : TFT_RAW_WIDTH - 1);
+	set_register(0x21, TFT_FLIP_X ? TFT_RAW_HEIGHT - 1 : 0);
 }
 
 void tft_begin_sync(void)
@@ -112,3 +100,5 @@ void tft_begin_sync(void)
 	/* Activate GRAM write register. */
 	tft_control(0x22, NULL, 0);
 }
+
+#endif

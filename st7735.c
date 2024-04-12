@@ -16,16 +16,10 @@
 
 #include <tft.h>
 
-#if TFT_SWAP_XY
-#define WIDTH 160
-#define HEIGHT 128
-#else
-#define WIDTH 128
-#define HEIGHT 160
-#endif
+#if TFT_DRIVER == TFT_DRIVER_ST7735
 
-const int tft_width = WIDTH / TFT_SCALE;
-const int tft_height = HEIGHT / TFT_SCALE;
+#define WIDTH (TFT_WIDTH * TFT_SCALE)
+#define HEIGHT (TFT_HEIGHT * TFT_SCALE)
 
 void tft_preflight(void)
 {
@@ -63,3 +57,5 @@ void tft_begin_sync(void)
 	/* 10.1.21 RAMWR: Memory Write */
 	tft_control(0x2c, NULL, 0);
 }
+
+#endif

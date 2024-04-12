@@ -133,8 +133,8 @@ void tft_control(uint8_t reg, uint8_t *bstr, size_t len)
 
 void tft_init(void)
 {
-	int framebuf_len = tft_width * tft_height;
-	int txbuf_len = tft_width * 2 * TFT_SCALE;
+	int framebuf_len = TFT_WIDTH * TFT_HEIGHT;
+	int txbuf_len = TFT_WIDTH * 2 * TFT_SCALE;
 
 	printf("tft: Allocate buffers: %i, %i, %i, %i\n", framebuf_len, framebuf_len, txbuf_len,
 	       txbuf_len);
@@ -171,8 +171,9 @@ void tft_init(void)
 	printf("tft: Configured DMA channel: %i\n", dma_ch);
 
 	dma_conf = dma_channel_get_default_config(dma_ch);
-	channel_config_set_transfer_data_size(&dma_conf, DMA_SIZE_8);
+	channel_config_set_transfer_data_size(&dma_conf, DMA_SIZE_16);
 	channel_config_set_dreq(&dma_conf, spi_get_dreq(TFT_SPI_DEV, true));
+	channel_config_set_bswap(&dma_conf, true);
 
 	printf("tft: Begin reset & preflight...\n");
 
@@ -183,6 +184,9 @@ void tft_init(void)
 	sleep_ms(TFT_RST_DELAY);
 
 	tft_preflight();
+	tft_begin_sync();
+
+	spi_set_format(TFT_SPI_DEV, 16, 0, 0, SPI_MSB_FIRST);
 
 	printf("tft: Fill screen with black...\n");
 	tft_fill(0);
@@ -201,14 +205,14 @@ void tft_swap_buffers(void)
 
 void tft_sync(void)
 {
-	tft_begin_sync();
+	//tft_begin_sync();
 
-	for (int y = 0; y < tft_height; y++) {
+	for (int y = 0; y < TFT_HEIGHT; y++) {
 		uint16_t *buf = txbuf[y & 1];
 		uint16_t *bufptr = buf;
 
-		for (int x = 0; x < tft_width; x++) {
-			int i = y * tft_width + x;
+		for (int x = 0; x < TFT_WIDTH; x++) {
+			int i = y * TFT_WIDTH + x;
 			uint16_t color = tft_palette[tft_committed[i]];
 
 			for (int i = 0; i < TFT_SCALE; i++)
@@ -216,7 +220,7 @@ void tft_sync(void)
 		}
 
 		for (int i = 0; i < TFT_SCALE; i++)
-			write_buffer_dma(buf, tft_width * 2 * TFT_SCALE);
+			write_buffer_dma(buf, TFT_WIDTH * TFT_SCALE);
 	}
 
 	tft_dma_channel_wait_for_finish_blocking(dma_ch);
@@ -241,10 +245,10 @@ inline static int tft_clamp(int x, int min, int max)
 
 void tft_draw_rect(int x0, int y0, int x1, int y1, int color)
 {
-	x0 = tft_clamp(x0, 0, tft_width - 1);
-	x1 = tft_clamp(x1, 0, tft_width - 1);
-	y0 = tft_clamp(y0, 0, tft_height - 1);
-	y1 = tft_clamp(y1, 0, tft_height - 1);
+	x0 = tft_clamp(x0, 0, TFT_WIDTH - 1);
+	x1 = tft_clamp(x1, 0, TFT_WIDTH - 1);
+	y0 = tft_clamp(y0, 0, TFT_HEIGHT - 1);
+	y1 = tft_clamp(y1, 0, TFT_HEIGHT - 1);
 
 	if (x0 > x1) {
 		int tmp = x0;
@@ -267,7 +271,7 @@ void tft_draw_rect(int x0, int y0, int x1, int y1, int color)
 
 void tft_fill(int color)
 {
-	memset(tft_input, color, tft_width * tft_height);
+	memset(tft_input, color, TFT_WIDTH * TFT_HEIGHT);
 }
 
 void tft_draw_glyph(int x, int y, int color, char c)
