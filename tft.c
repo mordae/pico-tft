@@ -139,27 +139,28 @@ __weak void tft_dma_channel_wait_for_finish_blocking(int dma_ch_spi)
 	dma_channel_wait_for_finish_blocking(dma_ch_spi);
 }
 
-static void transmit_blocking(const void *buf, size_t len)
-{
-	size_t wr = spi_write_blocking(TFT_SPI_DEV, buf, len);
-
-	if (wr < len)
-		panic("tft: transmit_blocking: written < len");
-}
-
 static void __unused write_buffer_dma(void *bstr, size_t len)
 {
 	tft_dma_channel_wait_for_finish_blocking(dma_ch_spi);
 	dma_channel_transfer_from_buffer_now(dma_ch_spi, bstr, len);
 }
 
-void tft_control(uint8_t reg, uint8_t *bstr, size_t len)
+void tft_control(uint8_t reg, uint8_t *bstr, int len)
 {
 	select_register();
-	transmit_blocking(&reg, 1);
+	spi_write_blocking(TFT_SPI_DEV, &reg, 1);
 
 	select_data();
-	transmit_blocking(bstr, len);
+
+	for (int i = 0; i < len; i += 2) {
+		if (i < len) {
+			uint16_t tmp = (bstr[i] << 8) | bstr[i + 1];
+			spi_write16_blocking(TFT_SPI_DEV, &tmp, 1);
+		} else {
+			uint16_t tmp = bstr[i] << 8;
+			spi_write16_blocking(TFT_SPI_DEV, &tmp, 1);
+		}
+	}
 }
 
 void tft_init(void)
@@ -174,7 +175,9 @@ void tft_init(void)
 	tft_committed = buffer[1];
 
 	unsigned rate = spi_init(TFT_SPI_DEV, TFT_BAUDRATE);
-	printf("tft: spi rate=%u\n", rate);
+	spi_set_format(TFT_SPI_DEV, 16, 0, 0, SPI_MSB_FIRST);
+
+	printf("tft: spi 16b rate=%u\n", rate);
 
 	printf("tft: pins cs=%i, sck=%i, mosi=%i, rs=%i, rst=%i\n", TFT_CS_PIN, TFT_SCK_PIN,
 	       TFT_MOSI_PIN, TFT_RS_PIN, TFT_RST_PIN);
@@ -277,11 +280,6 @@ void tft_init(void)
 	sleep_ms(TFT_RST_DELAY);
 
 	tft_preflight();
-
-	printf("tft: fill screen with black...\n");
-	tft_fill(0);
-	tft_swap_buffers();
-	tft_sync();
 }
 
 void tft_swap_buffers(void)
@@ -296,7 +294,6 @@ void tft_swap_buffers(void)
 void tft_sync(void)
 {
 	tft_begin_sync();
-	spi_set_format(TFT_SPI_DEV, 16, 0, 0, SPI_MSB_FIRST);
 
 #if TFT_HW_ACCEL
 	for (int y = 0; y < TFT_HEIGHT; y++) {
@@ -308,7 +305,10 @@ void tft_sync(void)
 
 	dma_channel_transfer_from_buffer_now(dma_ch_rows, dma_row_script, 1);
 
-	while (dma_hw->ch[dma_ch_pio_in].al3_read_addr_trig)
+	while (dma_channel_is_busy(dma_ch_rows))
+		tft_dma_channel_wait_for_finish_blocking(dma_ch_rows);
+
+	while (dma_hw->ch[dma_ch_pio_in].read_addr)
 		tft_dma_channel_wait_for_finish_blocking(dma_ch_pio_in);
 #else
 	for (int y = 0; y < TFT_HEIGHT; y++) {
@@ -329,8 +329,6 @@ void tft_sync(void)
 
 	tft_dma_channel_wait_for_finish_blocking(dma_ch_spi);
 #endif
-
-	spi_set_format(TFT_SPI_DEV, 8, 0, 0, SPI_MSB_FIRST);
 }
 
 void tft_swap_sync(void)

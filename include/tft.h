@@ -131,7 +131,7 @@ void tft_draw_string_center(int x, int y, int color, const char *str);
 /*
  * Write directly into a control register.
  */
-void tft_control(uint8_t reg, uint8_t *bstr, size_t len);
+void tft_control(uint8_t reg, uint8_t *bstr, int len);
 
 /*
  * Weak symbol that can be replaced with a version that yields to
