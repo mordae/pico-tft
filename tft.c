@@ -277,9 +277,6 @@ void tft_init(void)
 	sleep_ms(TFT_RST_DELAY);
 
 	tft_preflight();
-	tft_begin_sync();
-
-	spi_set_format(TFT_SPI_DEV, 16, 0, 0, SPI_MSB_FIRST);
 
 	printf("tft: fill screen with black...\n");
 	tft_fill(0);
@@ -298,6 +295,9 @@ void tft_swap_buffers(void)
 
 void tft_sync(void)
 {
+	tft_begin_sync();
+	spi_set_format(TFT_SPI_DEV, 16, 0, 0, SPI_MSB_FIRST);
+
 #if TFT_HW_ACCEL
 	for (int y = 0; y < TFT_HEIGHT; y++) {
 		for (int i = 0; i < TFT_SCALE; i++) {
@@ -329,6 +329,8 @@ void tft_sync(void)
 
 	tft_dma_channel_wait_for_finish_blocking(dma_ch_spi);
 #endif
+
+	spi_set_format(TFT_SPI_DEV, 8, 0, 0, SPI_MSB_FIRST);
 }
 
 void tft_swap_sync(void)
