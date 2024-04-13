@@ -15,20 +15,34 @@
  */
 
 #include <pico/stdlib.h>
-#include <tft.h>
+
 #include <hardware/spi.h>
 #include <hardware/dma.h>
 
+#include <tft.h>
+
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #if !defined(TFT_RST_DELAY)
 #define TFT_RST_DELAY 50
 #endif
 
+#if !defined(TFT_HW_ACCEL)
+#define TFT_HW_ACCEL 0
+#endif
+
+#if !defined(TFT_PIO)
+#define TFT_PIO pio0
+#endif
+
 #if !defined(__weak)
 #define __weak __attribute__((__weak__))
+#endif
+
+#if TFT_HW_ACCEL
+#include "lut.pio.h"
 #endif
 
 /*
@@ -39,13 +53,18 @@
  *
  * After every cycle the buffers are rotated.
  */
-static uint8_t *buffer[2];
+static uint8_t buffer[2][TFT_HEIGHT * TFT_WIDTH];
 
+#if TFT_HW_ACCEL
+/* Addresses of rows to output. */
+static uint32_t dma_row_script[TFT_HEIGHT * TFT_SCALE + 1];
+#else
 /*
  * Per-row transfer buffers. These are also two.
  * We are writing into one while the other is read by DMA.
  */
-static uint16_t *txbuf[2];
+static uint16_t txbuf[2][TFT_WIDTH * TFT_SCALE];
+#endif
 
 /* Currently inactive buffer that is to be sent to the display. */
 uint8_t *tft_committed;
@@ -57,7 +76,7 @@ uint8_t *tft_input;
 extern uint8_t tft_font[256 * 16];
 
 /* Palette colors. */
-uint16_t tft_palette[256] = {
+uint16_t tft_palette[256] __attribute__((__aligned__(512))) = {
 	0x0000, 0x1082, 0x2104, 0x31a6, 0x4228, 0x52aa, 0x632c, 0x73ae, 0x8c51, 0x9cd3, 0xad55,
 	0xbdd7, 0xce59, 0xdefb, 0xef7d, 0xffff, 0x2082, 0x20a2, 0x20e2, 0x2102, 0x1902, 0x1102,
 	0x1102, 0x1103, 0x1104, 0x10c4, 0x10a4, 0x1084, 0x1884, 0x2084, 0x2083, 0x2083, 0x2041,
@@ -85,8 +104,21 @@ uint16_t tft_palette[256] = {
 };
 
 /* DMA channel to use for transmit. */
-static int dma_ch;
-static dma_channel_config dma_conf;
+static int dma_ch_spi;
+
+#if TFT_HW_ACCEL
+/* PIO SM for LUT & horizontal scaling. */
+static int sm_lut = -1;
+
+/* DMA channel for moving 8b samples into the PIO SM. */
+static int dma_ch_pio_in;
+
+/* DMA channel for moving 16b samples out of PIO SM. */
+static int dma_ch_pio_out;
+
+/* DMA channel to drive the row-by-row output. */
+static int dma_ch_rows;
+#endif
 
 /* Implemented by the driver. */
 extern void tft_preflight(void);
@@ -102,9 +134,9 @@ inline static void select_data(void)
 	gpio_put(TFT_RS_PIN, 1);
 }
 
-__weak void tft_dma_channel_wait_for_finish_blocking(int dma_ch)
+__weak void tft_dma_channel_wait_for_finish_blocking(int dma_ch_spi)
 {
-	dma_channel_wait_for_finish_blocking(dma_ch);
+	dma_channel_wait_for_finish_blocking(dma_ch_spi);
 }
 
 static void transmit_blocking(const void *buf, size_t len)
@@ -115,11 +147,10 @@ static void transmit_blocking(const void *buf, size_t len)
 		panic("tft: transmit_blocking: written < len");
 }
 
-static void write_buffer_dma(void *bstr, size_t len)
+static void __unused write_buffer_dma(void *bstr, size_t len)
 {
-	tft_dma_channel_wait_for_finish_blocking(dma_ch);
-	select_data();
-	dma_channel_configure(dma_ch, &dma_conf, &spi_get_hw(TFT_SPI_DEV)->dr, bstr, len, true);
+	tft_dma_channel_wait_for_finish_blocking(dma_ch_spi);
+	dma_channel_transfer_from_buffer_now(dma_ch_spi, bstr, len);
 }
 
 void tft_control(uint8_t reg, uint8_t *bstr, size_t len)
@@ -136,26 +167,17 @@ void tft_init(void)
 	int framebuf_len = TFT_WIDTH * TFT_HEIGHT;
 	int txbuf_len = TFT_WIDTH * 2 * TFT_SCALE;
 
-	printf("tft: Allocate buffers: %i, %i, %i, %i\n", framebuf_len, framebuf_len, txbuf_len,
-	       txbuf_len);
-
-	buffer[0] = malloc(framebuf_len);
-	buffer[1] = malloc(framebuf_len);
-
-	txbuf[0] = malloc(txbuf_len);
-	txbuf[1] = malloc(txbuf_len);
-
-	if ((!buffer[0]) || (!buffer[1]) || (!txbuf[0]) || (!txbuf[1]))
-		panic("tft: tft_init: malloc failed");
+	printf("tft: allocate fb1=%i, fb2=%i, tx1=%i, tx2=%i\n", framebuf_len, framebuf_len,
+	       txbuf_len, txbuf_len);
 
 	tft_input = buffer[0];
 	tft_committed = buffer[1];
 
 	unsigned rate = spi_init(TFT_SPI_DEV, TFT_BAUDRATE);
-	printf("tft: Configured SPI: rate=%u\n", rate);
+	printf("tft: spi rate=%u\n", rate);
 
-	printf("tft: Configure pins: cs=%i, sck=%i, mosi=%i, rs=%i, rst=%i\n", TFT_CS_PIN,
-	       TFT_SCK_PIN, TFT_MOSI_PIN, TFT_RS_PIN, TFT_RST_PIN);
+	printf("tft: pins cs=%i, sck=%i, mosi=%i, rs=%i, rst=%i\n", TFT_CS_PIN, TFT_SCK_PIN,
+	       TFT_MOSI_PIN, TFT_RS_PIN, TFT_RST_PIN);
 
 	gpio_set_function(TFT_CS_PIN, GPIO_FUNC_SPI);
 	gpio_set_function(TFT_SCK_PIN, GPIO_FUNC_SPI);
@@ -167,15 +189,86 @@ void tft_init(void)
 	gpio_init(TFT_RS_PIN);
 	gpio_set_dir(TFT_RS_PIN, GPIO_OUT);
 
-	dma_ch = dma_claim_unused_channel(true);
-	printf("tft: Configured DMA channel: %i\n", dma_ch);
+	dma_ch_spi = dma_claim_unused_channel(true);
+	printf("tft: claimed dma%i for spi\n", dma_ch_spi);
 
-	dma_conf = dma_channel_get_default_config(dma_ch);
+	dma_channel_config dma_conf;
+
+#if TFT_HW_ACCEL
+	dma_ch_rows = dma_claim_unused_channel(true);
+	printf("tft: claimed dma%i for rows\n", dma_ch_rows);
+
+	dma_ch_pio_in = dma_claim_unused_channel(true);
+	printf("tft: claimed dma%i for pio_in\n", dma_ch_pio_in);
+
+	dma_ch_pio_out = dma_claim_unused_channel(true);
+	printf("tft: claimed dma%i for pio_out\n", dma_ch_pio_out);
+
+	sm_lut = pio_claim_unused_sm(TFT_PIO, true);
+	printf("tft: claimed pio%i.%i\n", TFT_PIO == pio0 ? 0 : 1, sm_lut);
+
+	struct pio_lut_config lut_cfg = {
+		.origin = -1,
+		.pio = SDK_PIO,
+		.sm = sm_lut,
+		.base_addr = (uint32_t)tft_palette,
+		.scale = TFT_SCALE,
+	};
+
+	int offset = pio_lut_init(&lut_cfg);
+
+	if (offset < 0)
+		panic("tft: pio_lut_init failed");
+
+	printf("tft: pio_lut offset=%i\n", offset);
+
+	pio_sm_set_enabled(SDK_PIO, sm_lut, true);
+
+	dma_conf = dma_channel_get_default_config(dma_ch_spi);
+	channel_config_set_read_increment(&dma_conf, false);
+	channel_config_set_write_increment(&dma_conf, false);
 	channel_config_set_transfer_data_size(&dma_conf, DMA_SIZE_16);
 	channel_config_set_dreq(&dma_conf, spi_get_dreq(TFT_SPI_DEV, true));
-	channel_config_set_bswap(&dma_conf, true);
+	channel_config_set_chain_to(&dma_conf, dma_ch_pio_out);
+	channel_config_set_irq_quiet(&dma_conf, true);
+	dma_channel_configure(dma_ch_spi, &dma_conf, &spi_get_hw(TFT_SPI_DEV)->dr, NULL, 1, false);
 
-	printf("tft: Begin reset & preflight...\n");
+	dma_conf = dma_channel_get_default_config(dma_ch_pio_out);
+	channel_config_set_read_increment(&dma_conf, false);
+	channel_config_set_write_increment(&dma_conf, false);
+	channel_config_set_transfer_data_size(&dma_conf, DMA_SIZE_32);
+	channel_config_set_dreq(&dma_conf, pio_get_dreq(TFT_PIO, sm_lut, false));
+	channel_config_set_irq_quiet(&dma_conf, true);
+	dma_channel_configure(dma_ch_pio_out, &dma_conf, &dma_hw->ch[dma_ch_spi].al3_read_addr_trig,
+			      &TFT_PIO->rxf[sm_lut], 1, true);
+
+	dma_conf = dma_channel_get_default_config(dma_ch_pio_in);
+	channel_config_set_read_increment(&dma_conf, true);
+	channel_config_set_write_increment(&dma_conf, false);
+	channel_config_set_transfer_data_size(&dma_conf, DMA_SIZE_8);
+	channel_config_set_dreq(&dma_conf, pio_get_dreq(TFT_PIO, sm_lut, true));
+	channel_config_set_chain_to(&dma_conf, dma_ch_rows);
+	channel_config_set_irq_quiet(&dma_conf, true);
+	dma_channel_configure(dma_ch_pio_in, &dma_conf, &TFT_PIO->txf[sm_lut], NULL, TFT_WIDTH,
+			      false);
+
+	dma_conf = dma_channel_get_default_config(dma_ch_rows);
+	channel_config_set_read_increment(&dma_conf, true);
+	channel_config_set_write_increment(&dma_conf, false);
+	channel_config_set_transfer_data_size(&dma_conf, DMA_SIZE_32);
+	channel_config_set_irq_quiet(&dma_conf, true);
+	dma_channel_configure(dma_ch_rows, &dma_conf, &dma_hw->ch[dma_ch_pio_in].al3_read_addr_trig,
+			      NULL, 1, false);
+#else
+	dma_conf = dma_channel_get_default_config(dma_ch_spi);
+	channel_config_set_transfer_data_size(&dma_conf, DMA_SIZE_16);
+	channel_config_set_read_increment(&dma_conf, true);
+	channel_config_set_write_increment(&dma_conf, false);
+	channel_config_set_dreq(&dma_conf, spi_get_dreq(TFT_SPI_DEV, true));
+	dma_channel_configure(dma_ch_spi, &dma_conf, &spi_get_hw(TFT_SPI_DEV)->dr, NULL, 0, false);
+#endif
+
+	printf("tft: begin reset & preflight...\n");
 
 	gpio_put(TFT_RST_PIN, 0);
 	sleep_ms(TFT_RST_DELAY);
@@ -188,7 +281,7 @@ void tft_init(void)
 
 	spi_set_format(TFT_SPI_DEV, 16, 0, 0, SPI_MSB_FIRST);
 
-	printf("tft: Fill screen with black...\n");
+	printf("tft: fill screen with black...\n");
 	tft_fill(0);
 	tft_swap_buffers();
 	tft_sync();
@@ -205,8 +298,19 @@ void tft_swap_buffers(void)
 
 void tft_sync(void)
 {
-	//tft_begin_sync();
+#if TFT_HW_ACCEL
+	for (int y = 0; y < TFT_HEIGHT; y++) {
+		for (int i = 0; i < TFT_SCALE; i++) {
+			uint8_t *row = tft_committed + y * TFT_WIDTH;
+			dma_row_script[y * TFT_SCALE + i] = (uint32_t)row;
+		}
+	}
 
+	dma_channel_transfer_from_buffer_now(dma_ch_rows, dma_row_script, 1);
+
+	while (dma_hw->ch[dma_ch_pio_in].al3_read_addr_trig)
+		tft_dma_channel_wait_for_finish_blocking(dma_ch_pio_in);
+#else
 	for (int y = 0; y < TFT_HEIGHT; y++) {
 		uint16_t *buf = txbuf[y & 1];
 		uint16_t *bufptr = buf;
@@ -216,14 +320,15 @@ void tft_sync(void)
 			uint16_t color = tft_palette[tft_committed[i]];
 
 			for (int i = 0; i < TFT_SCALE; i++)
-				*bufptr++ = __builtin_bswap16(color);
+				*bufptr++ = color;
 		}
 
 		for (int i = 0; i < TFT_SCALE; i++)
 			write_buffer_dma(buf, TFT_WIDTH * TFT_SCALE);
 	}
 
-	tft_dma_channel_wait_for_finish_blocking(dma_ch);
+	tft_dma_channel_wait_for_finish_blocking(dma_ch_spi);
+#endif
 }
 
 void tft_swap_sync(void)

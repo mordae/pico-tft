@@ -1,5 +1,6 @@
 if (NOT TARGET pico_tft)
   pico_add_library(pico_tft)
+  pico_generate_pio_header(pico_tft ${CMAKE_CURRENT_LIST_DIR}/lut.pio)
 
   target_include_directories(
     pico_tft
