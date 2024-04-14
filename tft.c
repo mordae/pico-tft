@@ -404,24 +404,8 @@ void tft_swap_sync(void)
 	tft_sync();
 }
 
-inline static int tft_clamp(int x, int min, int max)
-{
-	if (x < min)
-		return min;
-
-	if (x > max)
-		return max;
-
-	return x;
-}
-
 void tft_draw_rect(int x0, int y0, int x1, int y1, int color)
 {
-	x0 = tft_clamp(x0, 0, TFT_WIDTH - 1);
-	x1 = tft_clamp(x1, 0, TFT_WIDTH - 1);
-	y0 = tft_clamp(y0, 0, TFT_HEIGHT - 1);
-	y1 = tft_clamp(y1, 0, TFT_HEIGHT - 1);
-
 	if (x0 > x1) {
 		int tmp = x0;
 		x0 = x1;
@@ -434,11 +418,9 @@ void tft_draw_rect(int x0, int y0, int x1, int y1, int color)
 		y1 = tmp;
 	}
 
-	for (int y = y0; y <= y1; y++) {
-		for (int x = x0; x <= x1; x++) {
+	for (int y = y0; y <= y1; y++)
+		for (int x = x0; x <= x1; x++)
 			tft_draw_pixel(x, y, color);
-		}
-	}
 }
 
 void tft_fill(int color)
