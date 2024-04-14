@@ -57,17 +57,13 @@ static uint8_t buffer[2][TFT_HEIGHT * TFT_WIDTH];
 
 #if TFT_HW_ACCEL
 /* Addresses of rows to output. */
-#if TFT_SWAP_XY
-static uint32_t dma_row_script[TFT_WIDTH * TFT_SCALE + 1];
-#else
-static uint32_t dma_row_script[TFT_HEIGHT * TFT_SCALE + 1];
-#endif
+static uint32_t dma_row_script[TFT_RAW_HEIGHT + 1];
 #else
 /*
  * Per-row transfer buffers. These are also two.
  * We are writing into one while the other is read by DMA.
  */
-static uint16_t txbuf[2][TFT_WIDTH * TFT_SCALE];
+static uint16_t txbuf[2][TFT_RAW_WIDTH];
 #endif
 
 /* Currently inactive buffer that is to be sent to the display. */
@@ -379,20 +375,21 @@ void tft_sync(void)
 	tft_begin_sync();
 	select_chip(true);
 
-	for (int y = 0; y < TFT_HEIGHT; y++) {
+	const uint8_t *inptr = tft_committed;
+
+	for (int y = 0; y < TFT_RAW_HEIGHT / TFT_SCALE; y++) {
 		uint16_t *buf = txbuf[y & 1];
 		uint16_t *bufptr = buf;
 
-		for (int x = 0; x < TFT_WIDTH; x++) {
-			int i = y * TFT_WIDTH + x;
-			uint16_t color = tft_palette[tft_committed[i]];
+		for (int x = 0; x < TFT_RAW_WIDTH / TFT_SCALE; x++) {
+			uint16_t color = tft_palette[*inptr++];
 
 			for (int i = 0; i < TFT_SCALE; i++)
 				*bufptr++ = color;
 		}
 
 		for (int i = 0; i < TFT_SCALE; i++)
-			write_buffer_dma(buf, TFT_WIDTH * TFT_SCALE);
+			write_buffer_dma(buf, TFT_RAW_WIDTH);
 	}
 
 	tft_dma_channel_wait_for_finish_blocking(dma_ch_spi);

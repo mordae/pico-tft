@@ -58,7 +58,7 @@ void tft_preflight(void)
 	tft_control(0x2b, paset, sizeof paset);
 
 	/* 8.3.2 FRMCTR1: Frame Rate Control */
-	uint8_t frmctr1[] = { 0, 31 }; // 61 fps
+	uint8_t frmctr1[] = { 0, 24 }; // 79 fps
 	tft_control(0xb1, frmctr1, sizeof frmctr1);
 }
 
