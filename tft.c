@@ -145,7 +145,7 @@ static void __unused write_buffer_dma(void *bstr, size_t len)
 	dma_channel_transfer_from_buffer_now(dma_ch_spi, bstr, len);
 }
 
-void tft_control(uint8_t reg, uint8_t *bstr, int len)
+void tft_control(uint8_t reg, const uint8_t *bstr, int len)
 {
 	select_register();
 	spi_write_blocking(TFT_SPI_DEV, &reg, 1);
@@ -153,15 +153,39 @@ void tft_control(uint8_t reg, uint8_t *bstr, int len)
 	select_data();
 
 	for (int i = 0; i < len; i += 2) {
-		if (i < len) {
-			uint16_t tmp = (bstr[i] << 8) | bstr[i + 1];
-			spi_write16_blocking(TFT_SPI_DEV, &tmp, 1);
-		} else {
-			uint16_t tmp = bstr[i] << 8;
-			spi_write16_blocking(TFT_SPI_DEV, &tmp, 1);
-		}
+		uint16_t tmp = (bstr[i] << 8) | bstr[i + 1];
+		spi_write16_blocking(TFT_SPI_DEV, &tmp, 1);
+	}
+
+	if (len & 1) {
+		uint16_t tmp = bstr[len - 1] << 8;
+		spi_write16_blocking(TFT_SPI_DEV, &tmp, 1);
 	}
 }
+
+#if defined(TFT_MISO_PIN)
+void tft_read(uint8_t reg, uint8_t *bstr, int len)
+{
+	select_register();
+	spi_write_blocking(TFT_SPI_DEV, &reg, 1);
+
+	select_data();
+
+	const uint16_t blank = 0;
+	uint16_t tmp;
+
+	for (int i = 0; i < len; i += 2) {
+		spi_read16_blocking(TFT_SPI_DEV, blank, &tmp, 1);
+		bstr[i] = tmp >> 8;
+		bstr[i + 1] = tmp;
+	}
+
+	if (len & 1) {
+		spi_read16_blocking(TFT_SPI_DEV, blank, &tmp, 1);
+		bstr[len - 1] = tmp >> 8;
+	}
+}
+#endif
 
 void tft_init(void)
 {
@@ -179,12 +203,21 @@ void tft_init(void)
 
 	printf("tft: spi 16b rate=%u\n", rate);
 
+#if defined(TFT_MISO_PIN)
+	printf("tft: pins cs=%i, sck=%i, mosi=%i, miso=%i, rs=%i, rst=%i\n", TFT_CS_PIN,
+	       TFT_SCK_PIN, TFT_MOSI_PIN, TFT_MISO_PIN, TFT_RS_PIN, TFT_RST_PIN);
+#else
 	printf("tft: pins cs=%i, sck=%i, mosi=%i, rs=%i, rst=%i\n", TFT_CS_PIN, TFT_SCK_PIN,
 	       TFT_MOSI_PIN, TFT_RS_PIN, TFT_RST_PIN);
+#endif
 
 	gpio_set_function(TFT_CS_PIN, GPIO_FUNC_SPI);
 	gpio_set_function(TFT_SCK_PIN, GPIO_FUNC_SPI);
 	gpio_set_function(TFT_MOSI_PIN, GPIO_FUNC_SPI);
+
+#if defined(TFT_MISO_PIN)
+	gpio_set_function(TFT_MISO_PIN, GPIO_FUNC_SPI);
+#endif
 
 	gpio_init(TFT_RST_PIN);
 	gpio_set_dir(TFT_RST_PIN, GPIO_OUT);

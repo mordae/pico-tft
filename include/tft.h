@@ -131,7 +131,14 @@ void tft_draw_string_center(int x, int y, int color, const char *str);
 /*
  * Write directly into a control register.
  */
-void tft_control(uint8_t reg, uint8_t *bstr, int len);
+void tft_control(uint8_t reg, const uint8_t *bstr, int len);
+
+#if defined(TFT_MISO_PIN)
+/*
+ * Read directly from a control register.
+ */
+void tft_read(uint8_t reg, uint8_t *bstr, int len);
+#endif
 
 /*
  * Weak symbol that can be replaced with a version that yields to
