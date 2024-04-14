@@ -57,7 +57,11 @@ static uint8_t buffer[2][TFT_HEIGHT * TFT_WIDTH];
 
 #if TFT_HW_ACCEL
 /* Addresses of rows to output. */
+#if TFT_SWAP_XY
+static uint32_t dma_row_script[TFT_WIDTH * TFT_SCALE + 1];
+#else
 static uint32_t dma_row_script[TFT_HEIGHT * TFT_SCALE + 1];
+#endif
 #else
 /*
  * Per-row transfer buffers. These are also two.
@@ -134,6 +138,11 @@ inline static void select_data(void)
 	gpio_put(TFT_RS_PIN, 1);
 }
 
+inline static void select_chip(bool cs)
+{
+	gpio_put(TFT_CS_PIN, !cs);
+}
+
 __weak void tft_dma_channel_wait_for_finish_blocking(int dma_ch_spi)
 {
 	dma_channel_wait_for_finish_blocking(dma_ch_spi);
@@ -148,6 +157,7 @@ static void __unused write_buffer_dma(void *bstr, size_t len)
 void tft_control(uint8_t reg, const uint8_t *bstr, int len)
 {
 	select_register();
+	select_chip(true);
 	spi_write_blocking(TFT_SPI_DEV, &reg, 1);
 
 	select_data();
@@ -161,13 +171,19 @@ void tft_control(uint8_t reg, const uint8_t *bstr, int len)
 		uint16_t tmp = bstr[len - 1] << 8;
 		spi_write16_blocking(TFT_SPI_DEV, &tmp, 1);
 	}
+
+	select_chip(false);
 }
 
 #if defined(TFT_MISO_PIN)
-void tft_read(uint8_t reg, uint8_t *bstr, int len)
+void tft_read(uint8_t reg, uint8_t *bstr, int len, int delay_us)
 {
 	select_register();
+	select_chip(true);
 	spi_write_blocking(TFT_SPI_DEV, &reg, 1);
+
+	if (delay_us >= 0)
+		sleep_us(delay_us);
 
 	select_data();
 
@@ -184,6 +200,8 @@ void tft_read(uint8_t reg, uint8_t *bstr, int len)
 		spi_read16_blocking(TFT_SPI_DEV, blank, &tmp, 1);
 		bstr[len - 1] = tmp >> 8;
 	}
+
+	select_chip(false);
 }
 #endif
 
@@ -211,7 +229,11 @@ void tft_init(void)
 	       TFT_MOSI_PIN, TFT_RS_PIN, TFT_RST_PIN);
 #endif
 
-	gpio_set_function(TFT_CS_PIN, GPIO_FUNC_SPI);
+	//gpio_set_function(TFT_CS_PIN, GPIO_FUNC_SPI);
+	gpio_init(TFT_CS_PIN);
+	gpio_set_dir(TFT_CS_PIN, GPIO_OUT);
+	gpio_put(TFT_CS_PIN, 1);
+
 	gpio_set_function(TFT_SCK_PIN, GPIO_FUNC_SPI);
 	gpio_set_function(TFT_MOSI_PIN, GPIO_FUNC_SPI);
 
@@ -285,8 +307,8 @@ void tft_init(void)
 	channel_config_set_dreq(&dma_conf, pio_get_dreq(TFT_PIO, sm_lut, true));
 	channel_config_set_chain_to(&dma_conf, dma_ch_rows);
 	channel_config_set_irq_quiet(&dma_conf, true);
-	dma_channel_configure(dma_ch_pio_in, &dma_conf, &TFT_PIO->txf[sm_lut], NULL, TFT_WIDTH,
-			      false);
+	dma_channel_configure(dma_ch_pio_in, &dma_conf, &TFT_PIO->txf[sm_lut], NULL,
+			      TFT_SWAP_XY ? TFT_HEIGHT : TFT_WIDTH, false);
 
 	dma_conf = dma_channel_get_default_config(dma_ch_rows);
 	channel_config_set_read_increment(&dma_conf, true);
@@ -326,15 +348,25 @@ void tft_swap_buffers(void)
 
 void tft_sync(void)
 {
-	tft_begin_sync();
-
 #if TFT_HW_ACCEL
+#if TFT_SWAP_XY
+	for (int x = 0; x < TFT_WIDTH; x++) {
+		for (int i = 0; i < TFT_SCALE; i++) {
+			uint8_t *row = tft_committed + x * TFT_HEIGHT;
+			dma_row_script[x * TFT_SCALE + i] = (uint32_t)row;
+		}
+	}
+#else
 	for (int y = 0; y < TFT_HEIGHT; y++) {
 		for (int i = 0; i < TFT_SCALE; i++) {
 			uint8_t *row = tft_committed + y * TFT_WIDTH;
 			dma_row_script[y * TFT_SCALE + i] = (uint32_t)row;
 		}
 	}
+#endif
+
+	tft_begin_sync();
+	select_chip(true);
 
 	dma_channel_transfer_from_buffer_now(dma_ch_rows, dma_row_script, 1);
 
@@ -344,6 +376,9 @@ void tft_sync(void)
 	while (dma_hw->ch[dma_ch_pio_in].read_addr)
 		tft_dma_channel_wait_for_finish_blocking(dma_ch_pio_in);
 #else
+	tft_begin_sync();
+	select_chip(true);
+
 	for (int y = 0; y < TFT_HEIGHT; y++) {
 		uint16_t *buf = txbuf[y & 1];
 		uint16_t *bufptr = buf;
@@ -362,6 +397,8 @@ void tft_sync(void)
 
 	tft_dma_channel_wait_for_finish_blocking(dma_ch_spi);
 #endif
+
+	select_chip(false);
 }
 
 void tft_swap_sync(void)

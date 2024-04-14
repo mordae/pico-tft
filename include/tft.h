@@ -31,12 +31,18 @@
 #define TFT_SWAP_XY 0
 #endif
 
+#if !defined(TFT_VSYNC)
+#define TFT_VSYNC 0
+#endif
+
 #if TFT_DRIVER == TFT_DRIVER_ST7735
 #define TFT_RAW_WIDTH 128
 #define TFT_RAW_HEIGHT 160
+#error "ST7735 driver is currently broken"
 #elif TFT_DRIVER == TFT_DRIVER_ILI9225
 #define TFT_RAW_WIDTH 176
 #define TFT_RAW_HEIGHT 220
+#error "ILI9225 driver is currently broken"
 #elif TFT_DRIVER == TFT_DRIVER_ILI9341
 #define TFT_RAW_WIDTH 240
 #define TFT_RAW_HEIGHT 320
@@ -97,7 +103,11 @@ inline static void __unused tft_draw_pixel(int x, int y, int color)
 	if ((y >= TFT_HEIGHT) || (y < 0))
 		return;
 
+#if TFT_SWAP_XY
+	int i = x * TFT_HEIGHT + y;
+#else
 	int i = y * TFT_WIDTH + x;
+#endif
 	tft_input[i] = color;
 }
 
@@ -137,7 +147,7 @@ void tft_control(uint8_t reg, const uint8_t *bstr, int len);
 /*
  * Read directly from a control register.
  */
-void tft_read(uint8_t reg, uint8_t *bstr, int len);
+void tft_read(uint8_t reg, uint8_t *bstr, int len, int delay_us);
 #endif
 
 /*

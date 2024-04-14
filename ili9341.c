@@ -15,6 +15,7 @@
  */
 
 #include <tft.h>
+#include <stdio.h>
 
 #if TFT_DRIVER == TFT_DRIVER_ILI9341
 
@@ -32,8 +33,8 @@ void tft_preflight(void)
 	sleep_ms(120);
 
 	/* 8.2.6 MADCTL: Memory Access Data Control */
-	uint8_t madctl = (TFT_SWAP_XY << 5) | (TFT_FLIP_X << 6) | (TFT_FLIP_Y << 7) |
-			 (1 << 3) /* BGR swap */;
+	uint8_t madctl = (0 << 5) | (TFT_FLIP_X << 6) | (TFT_FLIP_Y << 7) |
+			 (1 << 3) /* BGR swap */ | (TFT_FLIP_Y << 4) | (TFT_FLIP_X << 2);
 	tft_control(0x36, &madctl, sizeof madctl);
 
 	/* 8.2.33 COLMOD: Interface Pixel Format */
@@ -49,16 +50,30 @@ void tft_preflight(void)
 	tft_control(0xb7, &etmod, sizeof etmod);
 
 	/* 8.2.20 CASET: Column Address Set */
-	uint8_t caset[] = { 0, 0, WIDTH >> 8, WIDTH & 0xff };
+	uint8_t caset[] = { 0, 0, TFT_RAW_WIDTH >> 8, TFT_RAW_WIDTH & 0xff };
 	tft_control(0x2a, caset, sizeof caset);
 
 	/* 8.2.21 PASET: Page Address Set */
-	uint8_t paset[] = { 0, 0, HEIGHT >> 8, HEIGHT & 0xff };
+	uint8_t paset[] = { 0, 0, TFT_RAW_HEIGHT >> 8, TFT_RAW_HEIGHT & 0xff };
 	tft_control(0x2b, paset, sizeof paset);
+
+	/* 8.3.2 FRMCTR1: Frame Rate Control */
+	uint8_t frmctr1[] = { 0, 31 }; // 61 fps
+	tft_control(0xb1, frmctr1, sizeof frmctr1);
 }
 
 void tft_begin_sync(void)
 {
+#if defined(TFT_MISO_PIN) && TFT_VSYNC
+	unsigned scanline;
+
+	do {
+		uint8_t scl[3];
+		tft_read(0x45, scl, sizeof scl, 3);
+		scanline = ((unsigned)scl[1] << 2) | (scl[2] >> 6);
+	} while (scanline > (TFT_RAW_HEIGHT * 3 / 4));
+#endif
+
 	/* 8.2.22 RAMWR: Memory Write */
 	tft_control(0x2c, NULL, 0);
 }
