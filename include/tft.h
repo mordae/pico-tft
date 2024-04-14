@@ -111,6 +111,11 @@ inline static void __unused tft_draw_pixel(int x, int y, int color)
 	tft_input[i] = color;
 }
 
+inline static __unused uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b)
+{
+	return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+}
+
 /*
  * Color a whole rect of pixels.
  */
