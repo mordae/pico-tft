@@ -111,23 +111,34 @@ inline static void __unused tft_draw_pixel(int x, int y, int color)
 	tft_input[i] = color;
 }
 
-#define rgb565(r, g, b) (((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3)
+#define rgb565(r, g, b) ((((r) & 31) << 11) | (((g) & 63) << 5) | ((b) & 31))
+#define rgb332(r, g, b) ((((r) & 7) << 5) | (((g) & 7) << 2) | ((b) & 3))
 
-#define rgb565_red(rgb565) (((rgb565) >> 11) & 31)
-#define rgb565_green(rgb565) (((rgb565) >> 5) & 63)
-#define rgb565_blue(rgb565) ((rgb565) & 31)
+#define rgb565_just_red(x) ((x) & 0xf800)
+#define rgb565_just_green(x) ((x) & 0x07e0)
+#define rgb565_just_blue(x) ((x) & 0x1f)
 
-#define rgb332(r, g, b) (((r) >> 5) << 5) | (((g) >> 5) << 2) | ((b) >> 6)
+#define rgb565_red(x) ((rgb565_just_red((x)) >> 8) | (rgb565_just_red((x)) >> 13))
+#define rgb565_green(x) ((rgb565_just_green((x)) >> 3) | (rgb565_just_green((x)) >> 9))
+#define rgb565_blue(x) ((rgb565_just_blue((x)) << 3) | (rgb565_just_blue((x)) >> 2))
 
-#define rgb332_red(rgb332) (((rgb332) >> 5) & 7)
-#define rgb332_green(rgb332) (((rgb332) >> 2) & 7)
-#define rgb332_blue(rgb332) ((rgb332) & 3)
+#define rgb332_just_red(x) ((x) & 0xe0)
+#define rgb332_just_green(x) ((x) & 0x1c)
+#define rgb332_just_blue(x) ((x) & 0x03)
 
-#define rgb332_to_rgb565(rgb332) \
-	rgb565(rgb332_red((rgb332)), rgb332_green((rgb332)), rgb332_blue((rgb332)))
+#define rgb332_red(x) \
+	(rgb332_just_red((x)) | (rgb332_just_red((x)) >> 3) | (rgb332_just_red((x)) >> 6))
+#define rgb332_green(x) \
+	((rgb332_just_green((x)) << 3) | rgb332_just_green((x)) | (rgb332_just_green((x)) >> 3))
+#define rgb332_blue(x)                                                 \
+	((rgb332_just_blue((x)) << 6) | (rgb332_just_blue((x)) << 4) | \
+	 (rgb332_just_blue((x)) << 2) | rgb332_just_blue((x)))
 
-#define rgb565_to_rgb332(rgb565) \
-	rgb332(rgb565_red((rgb565)), rgb565_green((rgb565)), rgb565_blue((rgb565)))
+#define rgb_to_rgb565(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
+#define rgb_to_rgb332(r, g, b) ((((r) >> 5) << 5) | (((g) >> 5) << 2) | ((b) >> 6))
+
+#define rgb332_to_rgb565(x) rgb_to_rgb565(rgb332_red((x)), rgb332_green((x)), rgb332_blue((x)))
+#define rgb565_to_rgb332(x) rgb_to_rgb332(rgb565_red((x)), rgb565_green((x)), rgb565_blue((x)))
 
 /*
  * Color a whole rect of pixels.
