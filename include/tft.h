@@ -95,23 +95,39 @@ void tft_swap_sync(void);
  */
 extern uint8_t *tft_input;
 
-/*
- * Color a single pixel.
- */
-inline static void __unused tft_draw_pixel(int x, int y, int color)
+/* Color a single pixel. */
+inline static void __unused tft_draw_pixel_absolute(int ax, int ay, int color)
 {
-	if ((x >= TFT_WIDTH) || (x < 0))
+	if ((ax >= TFT_WIDTH) || (ax < 0))
 		return;
 
-	if ((y >= TFT_HEIGHT) || (y < 0))
+	if ((ay >= TFT_HEIGHT) || (ay < 0))
 		return;
 
 #if TFT_SWAP_XY
-	int i = x * TFT_HEIGHT + y;
+	int i = ax * TFT_HEIGHT + ay;
 #else
-	int i = y * TFT_WIDTH + x;
+	int i = ay * TFT_WIDTH + ax;
 #endif
 	tft_input[i] = color;
+}
+
+/* Origin for relative drawing. */
+extern int tft_origin_x;
+extern int tft_origin_y;
+
+/* Set origin for relative drawing. */
+inline static void __unused tft_set_origin(int x, int y)
+{
+	tft_origin_x = x;
+	tft_origin_y = y;
+}
+
+inline static void __unused tft_draw_pixel(int x, int y, int color)
+{
+	x -= tft_origin_x;
+	y -= tft_origin_y;
+	tft_draw_pixel_absolute(x, y, color);
 }
 
 #define rgb565(r, g, b) ((((r) & 31) << 11) | (((g) & 63) << 5) | ((b) & 31))

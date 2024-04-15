@@ -72,6 +72,10 @@ uint8_t *tft_committed;
 /* Current active buffer that is to be written into. */
 uint8_t *tft_input;
 
+/* Origin for relative drawing. */
+int tft_origin_x = 0;
+int tft_origin_y = 0;
+
 /* Font data. */
 extern uint8_t tft_font[256 * 16];
 
