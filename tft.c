@@ -428,6 +428,20 @@ void tft_fill(int color)
 	memset(tft_input, color, TFT_WIDTH * TFT_HEIGHT);
 }
 
+void tft_draw_sprite(int x, int y, int w, int h, const uint8_t *data, int transparency)
+{
+	for (int sy = 0; sy < h; sy++) {
+		for (int sx = 0; sx < w; sx++) {
+			int c = data[sy * w + sx];
+
+			if (c == transparency)
+				continue;
+
+			tft_draw_pixel(x + sx, y + sy, c);
+		}
+	}
+}
+
 void tft_draw_glyph(int x, int y, int color, char c)
 {
 	uint8_t *glyph = tft_font + (size_t)c * 16;

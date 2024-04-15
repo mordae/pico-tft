@@ -151,6 +151,12 @@ void tft_draw_rect(int x0, int y0, int x1, int y1, int color);
 void tft_fill(int color);
 
 /*
+ * Draw a simple sprite, starting from top-left.
+ * Transparency indicates what color to treat as transparent.
+ */
+void tft_draw_sprite(int x, int y, int w, int h, const uint8_t *data, int transparency);
+
+/*
  * Draw given glyph at specified coordinates.
  * The coordinates indicate bottom left of the glyph.
  */
