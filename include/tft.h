@@ -111,31 +111,23 @@ inline static void __unused tft_draw_pixel(int x, int y, int color)
 	tft_input[i] = color;
 }
 
-inline static __unused uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b)
-{
-	return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
-}
+#define rgb565(r, g, b) (((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3)
 
-inline static __unused uint8_t rgb332(uint8_t r, uint8_t g, uint8_t b)
-{
-	return ((r >> 5) << 5) | ((g >> 5) << 2) | (b >> 6);
-}
+#define rgb565_red(rgb565) (((rgb565) >> 11) & 31)
+#define rgb565_green(rgb565) (((rgb565) >> 5) & 63)
+#define rgb565_blue(rgb565) ((rgb565) & 31)
 
-inline static __unused uint16_t rgb332_to_rgb565(uint8_t rgb332)
-{
-	uint8_t r = (rgb332 >> 5) & 7;
-	uint8_t g = (rgb332 >> 2) & 7;
-	uint8_t b = (rgb332 >> 0) & 3;
-	return rgb565(r, g, b);
-}
+#define rgb332(r, g, b) (((r) >> 5) << 5) | (((g) >> 5) << 2) | ((b) >> 6)
 
-inline static __unused uint8_t rgb565_to_rgb332(uint16_t rgb565)
-{
-	uint8_t r = (rgb565 >> 11) & 31;
-	uint8_t g = (rgb565 >> 5) & 63;
-	uint8_t b = (rgb565 >> 0) & 31;
-	return rgb332(r, g, b);
-}
+#define rgb332_red(rgb332) (((rgb332) >> 5) & 7)
+#define rgb332_green(rgb332) (((rgb332) >> 2) & 7)
+#define rgb332_blue(rgb332) ((rgb332) & 3)
+
+#define rgb332_to_rgb565(rgb332) \
+	rgb565(rgb332_red((rgb332)), rgb332_green((rgb332)), rgb332_blue((rgb332)))
+
+#define rgb565_to_rgb332(rgb565) \
+	rgb332(rgb565_red((rgb565)), rgb565_green((rgb565)), rgb565_blue((rgb565)))
 
 /*
  * Color a whole rect of pixels.
