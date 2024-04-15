@@ -116,6 +116,11 @@ inline static __unused uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b)
 	return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
 }
 
+inline static __unused uint8_t rgb332(uint8_t r, uint8_t g, uint8_t b)
+{
+	return ((r >> 5) << 5) | ((g >> 5) << 2) | (b >> 6);
+}
+
 /*
  * Color a whole rect of pixels.
  */
