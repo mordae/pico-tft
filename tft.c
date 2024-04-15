@@ -72,6 +72,12 @@ uint8_t *tft_committed;
 /* Current active buffer that is to be written into. */
 uint8_t *tft_input;
 
+/* Clipping rectangle. */
+int tft_clip_x0 = 0;
+int tft_clip_y0 = 0;
+int tft_clip_x1 = TFT_WIDTH;
+int tft_clip_y1 = TFT_HEIGHT;
+
 /* Origin for relative drawing. */
 int tft_origin_x = 0;
 int tft_origin_y = 0;

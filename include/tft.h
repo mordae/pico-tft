@@ -95,13 +95,41 @@ void tft_swap_sync(void);
  */
 extern uint8_t *tft_input;
 
+/* Clipping rectangle. */
+extern int tft_clip_x0;
+extern int tft_clip_y0;
+extern int tft_clip_x1;
+extern int tft_clip_y1;
+
+/*
+ * Set area to restrict painting to.
+ * Unlike with tft_draw_rect, the x1, y1 bounds are non-inclusive.
+ * Clipping applies to screen coordinates and ignores origin.
+ */
+inline static void __unused tft_set_clip(int x0, int y0, int x1, int y1)
+{
+	tft_clip_x0 = x0;
+	tft_clip_y0 = y0;
+	tft_clip_x1 = x1;
+	tft_clip_y1 = y1;
+}
+
+/* Clear clipping to include whole display. */
+inline static void __unused tft_clear_clip(void)
+{
+	tft_clip_x0 = 0;
+	tft_clip_y0 = 0;
+	tft_clip_x1 = TFT_WIDTH;
+	tft_clip_y1 = TFT_HEIGHT;
+}
+
 /* Color a single pixel. */
 inline static void __unused tft_draw_pixel_absolute(int ax, int ay, int color)
 {
-	if ((ax >= TFT_WIDTH) || (ax < 0))
+	if ((ax < tft_clip_x0) || (ax >= tft_clip_x1))
 		return;
 
-	if ((ay >= TFT_HEIGHT) || (ay < 0))
+	if ((ay < tft_clip_y0) || (ay >= tft_clip_y1))
 		return;
 
 #if TFT_SWAP_XY
@@ -123,6 +151,7 @@ inline static void __unused tft_set_origin(int x, int y)
 	tft_origin_y = y;
 }
 
+/* Color a single pixel, relative to origin. */
 inline static void __unused tft_draw_pixel(int x, int y, int color)
 {
 	x -= tft_origin_x;
