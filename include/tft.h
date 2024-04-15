@@ -56,6 +56,9 @@
 #define TFT_HEIGHT (int)(TFT_RAW_HEIGHT / TFT_SCALE)
 #endif
 
+#define TFT_RIGHT (TFT_WIDTH - 1)
+#define TFT_BOTTOM (TFT_HEIGHT - 1)
+
 /*
  * Modified latin 16x8 bitmap font.
  * Populate it with tft_load_font().
