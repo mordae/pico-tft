@@ -345,11 +345,17 @@ void tft_init(void)
 
 void tft_swap_buffers(void)
 {
-	uint8_t *tmp;
-
-	tmp = tft_committed;
+#if TFT_SWAP_XY
+	for (int y = 0; y < TFT_HEIGHT; y++) {
+		for (int x = 0; x < TFT_WIDTH; x++) {
+			tft_committed[x * TFT_HEIGHT + y] = tft_input[y * TFT_WIDTH + x];
+		}
+	}
+#else
+	uint8_t *tmp = tft_committed;
 	tft_committed = tft_input;
 	tft_input = tmp;
+#endif
 }
 
 void tft_sync(void)
