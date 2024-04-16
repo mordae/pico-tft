@@ -444,18 +444,42 @@ void tft_fill(int color)
 	memset(tft_input, color, TFT_WIDTH * TFT_HEIGHT);
 }
 
-void tft_draw_sprite(int x, int y, int w, int h, const uint8_t *data, int transparency)
+void tft_draw_sprite(int x, int y, int w, int h, const uint8_t *data, int trsp)
 {
-	for (int sy = 0; sy < h; sy++) {
-		for (int sx = 0; sx < w; sx++) {
-			int c = data[sy * w + sx];
+	tft_draw_sprite_flipped(x, y, w, h, data, trsp, false, false, false);
+}
 
-			if (c == transparency)
-				continue;
+void tft_draw_sprite_flipped(int x, int y, int w, int h, const uint8_t *data, int trsp, bool flip_x,
+			     bool flip_y, bool swap_xy)
+{
+#define loop                                   \
+	for (int sy = 0; sy < h; sy++)         \
+		for (int sx = 0; sx < w; sx++) \
+			if ((c = data[sy * w + sx]) != trsp)
 
-			tft_draw_pixel(x + sx, y + sy, c);
-		}
+	int c;
+	int b = h - 1;
+	int r = w - 1;
+
+	if (flip_y && flip_x && swap_xy) {
+		loop tft_draw_pixel(x + b - sy, y + r - sx, c);
+	} else if (flip_y && flip_x && !swap_xy) {
+		loop tft_draw_pixel(x + r - sx, y + b - sy, c);
+	} else if (flip_y && !flip_x && swap_xy) {
+		loop tft_draw_pixel(x + b - sy, y + sx, c);
+	} else if (flip_y && !flip_x && !swap_xy) {
+		loop tft_draw_pixel(x + sx, y + b - sy, c);
+	} else if (!flip_y && flip_x && swap_xy) {
+		loop tft_draw_pixel(x + sy, y + r - sx, c);
+	} else if (!flip_y && flip_x && !swap_xy) {
+		loop tft_draw_pixel(x + r - sx, y + sy, c);
+	} else if (!flip_y && !flip_x && swap_xy) {
+		loop tft_draw_pixel(x + sy, y + sx, c);
+	} else {
+		loop tft_draw_pixel(x + sx, y + sy, c);
 	}
+
+#undef loop
 }
 
 void tft_draw_glyph(int x, int y, int color, char c)
