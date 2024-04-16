@@ -108,10 +108,10 @@ extern int tft_clip_y1;
  */
 inline static void __unused tft_set_clip(int x0, int y0, int x1, int y1)
 {
-	tft_clip_x0 = x0;
-	tft_clip_y0 = y0;
-	tft_clip_x1 = x1;
-	tft_clip_y1 = y1;
+	tft_clip_x0 = x0 < 0 ? 0 : x0;
+	tft_clip_y0 = y0 < 0 ? 0 : y0;
+	tft_clip_x1 = x1 > TFT_WIDTH ? TFT_WIDTH : x1;
+	tft_clip_y1 = y1 > TFT_HEIGHT ? TFT_HEIGHT : y1;
 }
 
 /* Clear clipping to include whole display. */
