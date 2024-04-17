@@ -380,13 +380,20 @@ void tft_sync(void)
 	tft_begin_sync();
 	select_chip(true);
 
+	/* Start enqueuing individual rows. */
 	dma_channel_transfer_from_buffer_now(dma_ch_rows, dma_row_script, 1);
 
-	while (dma_channel_is_busy(dma_ch_rows))
-		tft_dma_channel_wait_for_finish_blocking(dma_ch_rows);
+	/* Busy-wait until the first row transfer starts. */
+	while (!dma_hw->ch[dma_ch_pio_in].read_addr)
+		tight_loop_contents();
 
+	/* Yield until all rows have been enqueued. */
 	while (dma_hw->ch[dma_ch_pio_in].read_addr)
 		tft_dma_channel_wait_for_finish_blocking(dma_ch_pio_in);
+
+	/* Busy wait until all the PIO outputs have been consumed. */
+	while (dma_debug_hw->ch[dma_ch_pio_out].ctrdeq)
+		tight_loop_contents();
 #else
 	tft_begin_sync();
 	select_chip(true);
@@ -410,6 +417,10 @@ void tft_sync(void)
 
 	tft_dma_channel_wait_for_finish_blocking(dma_ch_spi);
 #endif
+
+	/* Busy wait until SPI finishes as well. */
+	while (spi_is_busy(TFT_SPI_DEV))
+		tight_loop_contents();
 
 	select_chip(false);
 }
