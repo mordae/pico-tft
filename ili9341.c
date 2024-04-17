@@ -85,11 +85,14 @@ void tft_begin_sync(void)
 #if defined(TFT_MISO_PIN) && TFT_VSYNC
 	unsigned scanline;
 
-	do {
+	for (int i = 0; i < TFT_HEIGHT * 10; i++) {
 		uint8_t scl[3];
 		tft_read(0x45, scl, sizeof scl, 3);
 		scanline = ((unsigned)scl[1] << 2) | (scl[2] >> 6);
-	} while (scanline > (TFT_RAW_HEIGHT * 3 / 4));
+
+		if (scanline >= 4 && scanline < 16)
+			break;
+	}
 #endif
 
 	/* 8.2.22 RAMWR: Memory Write */
