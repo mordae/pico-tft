@@ -56,8 +56,7 @@
 static uint8_t buffer[2][TFT_HEIGHT * TFT_WIDTH];
 
 #if TFT_HW_ACCEL
-/* Addresses of rows to output. */
-static uint32_t dma_row_script[TFT_RAW_HEIGHT + 1];
+#include "tft_dma_row_script.h"
 #else
 /*
  * Per-row transfer buffers. These are also two.
@@ -361,27 +360,13 @@ void tft_swap_buffers(void)
 void tft_sync(void)
 {
 #if TFT_HW_ACCEL
-#if TFT_SWAP_XY
-	for (int x = 0; x < TFT_WIDTH; x++) {
-		for (int i = 0; i < TFT_SCALE; i++) {
-			uint8_t *row = tft_committed + x * TFT_HEIGHT;
-			dma_row_script[x * TFT_SCALE + i] = (uint32_t)row;
-		}
-	}
-#else
-	for (int y = 0; y < TFT_HEIGHT; y++) {
-		for (int i = 0; i < TFT_SCALE; i++) {
-			uint8_t *row = tft_committed + y * TFT_WIDTH;
-			dma_row_script[y * TFT_SCALE + i] = (uint32_t)row;
-		}
-	}
-#endif
-
 	tft_begin_sync();
 	select_chip(true);
 
-	/* Start enqueuing individual rows. */
-	dma_channel_transfer_from_buffer_now(dma_ch_rows, dma_row_script, 1);
+	/* Use DMA script stored in flash. */
+	const void **script = dma_row_script[tft_committed == buffer[1]];
+	script += (XIP_NOCACHE_NOALLOC_BASE - XIP_BASE) / sizeof(*script);
+	dma_channel_transfer_from_buffer_now(dma_ch_rows, script, 1);
 
 	/* Busy-wait until the first row transfer starts. */
 	while (!dma_hw->ch[dma_ch_pio_in].read_addr)
