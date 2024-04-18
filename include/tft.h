@@ -132,7 +132,11 @@ inline static void __unused tft_draw_pixel_absolute(int ax, int ay, int color)
 	if ((ay < tft_clip_y0) || (ay >= tft_clip_y1))
 		return;
 
+#if TFT_SWAP_XY
+	int i = ax * TFT_HEIGHT + ay;
+#else
 	int i = ay * TFT_WIDTH + ax;
+#endif
 	tft_input[i] = color;
 }
 

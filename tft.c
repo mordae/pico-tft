@@ -313,7 +313,7 @@ void tft_init(void)
 	channel_config_set_chain_to(&dma_conf, dma_ch_rows);
 	channel_config_set_irq_quiet(&dma_conf, true);
 	dma_channel_configure(dma_ch_pio_in, &dma_conf, &TFT_PIO->txf[sm_lut], NULL,
-			      TFT_SWAP_XY ? TFT_HEIGHT : TFT_WIDTH, false);
+			      TFT_RAW_WIDTH / TFT_SCALE, false);
 
 	dma_conf = dma_channel_get_default_config(dma_ch_rows);
 	channel_config_set_read_increment(&dma_conf, true);
@@ -344,17 +344,9 @@ void tft_init(void)
 
 void tft_swap_buffers(void)
 {
-#if TFT_SWAP_XY
-	for (int y = 0; y < TFT_HEIGHT; y++) {
-		for (int x = 0; x < TFT_WIDTH; x++) {
-			tft_committed[x * TFT_HEIGHT + y] = tft_input[y * TFT_WIDTH + x];
-		}
-	}
-#else
 	uint8_t *tmp = tft_committed;
 	tft_committed = tft_input;
 	tft_input = tmp;
-#endif
 }
 
 void tft_sync(void)
