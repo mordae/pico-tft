@@ -422,9 +422,15 @@ void tft_draw_rect(int x0, int y0, int x1, int y1, int color)
 		y1 = tmp;
 	}
 
+#if TFT_SWAP_XY
+	for (int x = x0; x <= x1; x++)
+		for (int y = y0; y <= y1; y++)
+			tft_draw_pixel(x, y, color);
+#else
 	for (int y = y0; y <= y1; y++)
 		for (int x = x0; x <= x1; x++)
 			tft_draw_pixel(x, y, color);
+#endif
 }
 
 void tft_fill(int color)
