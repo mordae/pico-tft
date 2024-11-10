@@ -368,7 +368,7 @@ void tft_sync(void)
 	while (dma_hw->ch[dma_ch_pio_in].read_addr)
 		tft_dma_channel_wait_for_finish_blocking(dma_ch_pio_in);
 
-#if defined(DMA_CH0_DBG_CTDREQ_OFFSET)
+#if !defined(UART_UARTPERIPHID0_OFFSET)
 	/* Busy wait until all the PIO outputs have been consumed. */
 	while (dma_debug_hw->ch[dma_ch_pio_out].dbg_ctdreq)
 		tight_loop_contents();
