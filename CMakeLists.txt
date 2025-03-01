@@ -12,9 +12,8 @@ if (NOT TARGET pico_tft)
     pico_tft
     INTERFACE
       ${CMAKE_CURRENT_LIST_DIR}/tft.c
+      ${CMAKE_CURRENT_LIST_DIR}/tft_dma_script.c
       ${CMAKE_CURRENT_LIST_DIR}/font.c
-      ${CMAKE_CURRENT_LIST_DIR}/st7735.c
-      ${CMAKE_CURRENT_LIST_DIR}/ili9225.c
       ${CMAKE_CURRENT_LIST_DIR}/ili9341.c
   )
 

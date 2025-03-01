@@ -1,99 +1,129 @@
-/*
- * Copyright (C) 2022 Jan Hamal Dvořák <mordae@anilinux.org>
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
-
 #pragma once
-#define TFT_DRIVER_ST7735 1
-#define TFT_DRIVER_ILI9225 2
-#define TFT_DRIVER_ILI9341 3
+#include <stdint.h>
+#include <stdbool.h>
 
-#include <pico/stdlib.h>
-
-#if !defined(TFT_SCALE)
-#define TFT_SCALE 1
-#elif (TFT_SCALE != 1) && (TFT_SCALE != 2) && (TFT_SCALE != 4)
-#error TFT_SCALE must be 1, 2, or 4
-#endif
-
-#if !defined(TFT_SWAP_XY)
-#define TFT_SWAP_XY 0
+#if !defined(__unused)
+#define __unused __attribute__((__unused__))
 #endif
 
 #if !defined(TFT_VSYNC)
 #define TFT_VSYNC 0
 #endif
 
-#if TFT_DRIVER == TFT_DRIVER_ST7735
-#define TFT_RAW_WIDTH 128
-#define TFT_RAW_HEIGHT 160
-#error "ST7735 driver is currently broken"
-#elif TFT_DRIVER == TFT_DRIVER_ILI9225
-#define TFT_RAW_WIDTH 176
-#define TFT_RAW_HEIGHT 220
-#error "ILI9225 driver is currently broken"
-#elif TFT_DRIVER == TFT_DRIVER_ILI9341
-#define TFT_RAW_WIDTH 240
-#define TFT_RAW_HEIGHT 320
+#if !defined(TFT_SWAP_XY)
+#define TFT_SWAP_XY 0
 #endif
 
+#define TFT_RAW_WIDTH 120
+#define TFT_RAW_HEIGHT 160
+
 #if TFT_SWAP_XY
-#define TFT_WIDTH (int)(TFT_RAW_HEIGHT / TFT_SCALE)
-#define TFT_HEIGHT (int)(TFT_RAW_WIDTH / TFT_SCALE)
+#define TFT_WIDTH (int)(TFT_RAW_HEIGHT)
+#define TFT_HEIGHT (int)(TFT_RAW_WIDTH)
 #else
-#define TFT_WIDTH (int)(TFT_RAW_WIDTH / TFT_SCALE)
-#define TFT_HEIGHT (int)(TFT_RAW_HEIGHT / TFT_SCALE)
+#define TFT_WIDTH TFT_RAW_WIDTH
+#define TFT_HEIGHT TFT_RAW_HEIGHT
 #endif
 
 #define TFT_RIGHT (TFT_WIDTH - 1)
 #define TFT_BOTTOM (TFT_HEIGHT - 1)
 
+/* Type alias for out 16b colors. */
+typedef uint16_t color_t;
+
+#define rgb565(r, g, b) ((((r) & 31) << 11) | (((g) & 63) << 5) | ((b) & 31))
+
+#define rgb565_just_red(x) ((x) & 0xf800)
+#define rgb565_just_green(x) ((x) & 0x07e0)
+#define rgb565_just_blue(x) ((x) & 0x1f)
+
+#define rgb565_red(x) ((rgb565_just_red((x)) >> 8) | (rgb565_just_red((x)) >> 13))
+#define rgb565_green(x) ((rgb565_just_green((x)) >> 3) | (rgb565_just_green((x)) >> 9))
+#define rgb565_blue(x) ((rgb565_just_blue((x)) << 3) | (rgb565_just_blue((x)) >> 2))
+
+#define rgb_to_rgb565(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
+
+inline static __unused color_t hsv_to_rgb565(float h, float s, float v)
+{
+	float r, g, b;
+
+	h *= 6.0f;
+	int i = (int)h;
+	float f = h - i;
+	float p = v * (1.0f - s);
+	float q = v * (1.0f - s * f);
+	float t = v * (1.0f - s * (1.0f - f));
+
+	switch (i % 6) {
+	case 0:
+		r = v;
+		g = t;
+		b = p;
+		break;
+	case 1:
+		r = q;
+		g = v;
+		b = p;
+		break;
+	case 2:
+		r = p;
+		g = v;
+		b = t;
+		break;
+	case 3:
+		r = p;
+		g = q;
+		b = v;
+		break;
+	case 4:
+		r = t;
+		g = p;
+		b = v;
+		break;
+	default:
+		r = v;
+		g = p;
+		b = q;
+		break;
+	}
+
+	// Convert from 0-1 to 0-255 range
+	uint8_t r8 = (uint8_t)(r * 255.0f);
+	uint8_t g8 = (uint8_t)(g * 255.0f);
+	uint8_t b8 = (uint8_t)(b * 255.0f);
+
+	return rgb_to_rgb565(r8, g8, b8);
+}
+
 /*
  * Modified latin 16x8 bitmap font.
  * Populate it with tft_load_font().
  */
-extern uint8_t tft_font[256 * 16];
+extern const uint8_t tft_font[256 * 16];
 
-/*
- * Color palette mapping into RGB565.
- */
-extern uint16_t tft_palette[256];
-
-/*
- * Initialize the screen.
- */
+/* Initialize the screen. */
 void tft_init(void);
 
-/*
- * Swap buffers to allow for a background sync.
- */
+/* Swap buffers. */
 void tft_swap_buffers(void);
 
-/*
- * Start display synchronization cycle.
- * Blocks until it's done so the you do not clobber the back buffer.
- */
+/* Start background sync of the back buffer. */
+void tft_begin_sync(void);
+
+/* Wait for the running sync to finish. */
+void tft_wait_for_finish(void);
+
+/* Begin sync and wait for it to finish. */
 void tft_sync(void);
 
-/* Shortcut to swap buffers and sync at once. */
-void tft_swap_sync(void);
+/* We are using double buffering. */
+extern color_t tft_buffers[2][TFT_RAW_HEIGHT][TFT_RAW_WIDTH];
 
-/*
- * Here goes whatever should be on the screen.
- * First come the Y rows, then the X columns.
- */
-extern uint8_t *tft_input;
+/* Current front-buffer (the one we paint into). */
+extern color_t (*tft_input)[TFT_RAW_WIDTH];
+
+/* Current back-buffer (the one being copied to screen). */
+extern color_t (*tft_active)[TFT_RAW_WIDTH];
 
 /* Clipping rectangle. */
 extern int tft_clip_x0;
@@ -124,20 +154,22 @@ inline static void __unused tft_clear_clip(void)
 }
 
 /* Color a single pixel. */
-inline static void __unused tft_draw_pixel_absolute(int ax, int ay, int color)
+inline static void __unused tft_draw_pixel_absolute(int x, int y, color_t color)
 {
-	if ((ax < tft_clip_x0) || (ax >= tft_clip_x1))
+	if ((x < tft_clip_x0) || (x >= tft_clip_x1))
 		return;
 
-	if ((ay < tft_clip_y0) || (ay >= tft_clip_y1))
+	if ((y < tft_clip_y0) || (y >= tft_clip_y1))
+		return;
+
+	if (x >= TFT_WIDTH || y >= TFT_HEIGHT)
 		return;
 
 #if TFT_SWAP_XY
-	int i = ax * TFT_HEIGHT + ay;
+	tft_input[x][y] = color;
 #else
-	int i = ay * TFT_WIDTH + ax;
+	tft_input[y][x] = color;
 #endif
-	tft_input[i] = color;
 }
 
 /* Origin for relative drawing. */
@@ -152,51 +184,22 @@ inline static void __unused tft_set_origin(int x, int y)
 }
 
 /* Color a single pixel, relative to origin. */
-inline static void __unused tft_draw_pixel(int x, int y, int color)
+inline static void __unused tft_draw_pixel(int x, int y, color_t color)
 {
 	x -= tft_origin_x;
 	y -= tft_origin_y;
 	tft_draw_pixel_absolute(x, y, color);
 }
 
-#define rgb565(r, g, b) ((((r) & 31) << 11) | (((g) & 63) << 5) | ((b) & 31))
-#define rgb332(r, g, b) ((((r) & 7) << 5) | (((g) & 7) << 2) | ((b) & 3))
-
-#define rgb565_just_red(x) ((x) & 0xf800)
-#define rgb565_just_green(x) ((x) & 0x07e0)
-#define rgb565_just_blue(x) ((x) & 0x1f)
-
-#define rgb565_red(x) ((rgb565_just_red((x)) >> 8) | (rgb565_just_red((x)) >> 13))
-#define rgb565_green(x) ((rgb565_just_green((x)) >> 3) | (rgb565_just_green((x)) >> 9))
-#define rgb565_blue(x) ((rgb565_just_blue((x)) << 3) | (rgb565_just_blue((x)) >> 2))
-
-#define rgb332_just_red(x) ((x) & 0xe0)
-#define rgb332_just_green(x) ((x) & 0x1c)
-#define rgb332_just_blue(x) ((x) & 0x03)
-
-#define rgb332_red(x) \
-	(rgb332_just_red((x)) | (rgb332_just_red((x)) >> 3) | (rgb332_just_red((x)) >> 6))
-#define rgb332_green(x) \
-	((rgb332_just_green((x)) << 3) | rgb332_just_green((x)) | (rgb332_just_green((x)) >> 3))
-#define rgb332_blue(x)                                                 \
-	((rgb332_just_blue((x)) << 6) | (rgb332_just_blue((x)) << 4) | \
-	 (rgb332_just_blue((x)) << 2) | rgb332_just_blue((x)))
-
-#define rgb_to_rgb565(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
-#define rgb_to_rgb332(r, g, b) ((((r) >> 5) << 5) | (((g) >> 5) << 2) | ((b) >> 6))
-
-#define rgb332_to_rgb565(x) rgb_to_rgb565(rgb332_red((x)), rgb332_green((x)), rgb332_blue((x)))
-#define rgb565_to_rgb332(x) rgb_to_rgb332(rgb565_red((x)), rgb565_green((x)), rgb565_blue((x)))
-
 /*
  * Color a whole rect of pixels.
  */
-void tft_draw_rect(int x0, int y0, int x1, int y1, int color);
+void tft_draw_rect(int x0, int y0, int x1, int y1, color_t color);
 
 /*
  * Paint the whole screen with a single color.
  */
-void tft_fill(int color);
+void tft_fill(color_t color);
 
 /*
  * Draw a simple sprite, starting from top-left coordinates.
@@ -216,7 +219,7 @@ void tft_draw_sprite_flipped(int x, int y, int w, int h, const uint8_t *data, in
  * Draw given glyph at specified coordinates.
  * The coordinates indicate bottom left of the glyph.
  */
-void tft_draw_glyph(int x, int y, int color, char c);
+void tft_draw_glyph(int x, int y, color_t color, char c);
 
 /*
  * Draw given string at specified coordinates.
@@ -225,9 +228,9 @@ void tft_draw_glyph(int x, int y, int color, char c);
  * bottom right for the tft_draw_string_right and bottom center for the
  * tft_draw_string_center.
  */
-void tft_draw_string(int x, int y, int color, const char *str);
-void tft_draw_string_right(int x, int y, int color, const char *str);
-void tft_draw_string_center(int x, int y, int color, const char *str);
+void tft_draw_string(int x, int y, color_t color, const char *str);
+void tft_draw_string_right(int x, int y, color_t color, const char *str);
+void tft_draw_string_center(int x, int y, color_t color, const char *str);
 
 /*
  * Write directly into a control register.
