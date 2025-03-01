@@ -338,13 +338,13 @@ void tft_fill(color_t color)
 			tft_input[y][x] = color;
 }
 
-void tft_draw_sprite(int x, int y, int w, int h, const color_t *data, int trsp)
+void tft_draw_sprite(int x, int y, int w, int h, const color_t *data, uint16_t trsp)
 {
 	tft_draw_sprite_flipped(x, y, w, h, data, trsp, false, false, false);
 }
 
-void tft_draw_sprite_flipped(int x, int y, int w, int h, const color_t *data, int trsp, bool flip_x,
-			     bool flip_y, bool swap_xy)
+void tft_draw_sprite_flipped(int x, int y, int w, int h, const color_t *data, uint16_t trsp,
+			     bool flip_x, bool flip_y, bool swap_xy)
 {
 #define loop                                   \
 	for (int sy = 0; sy < h; sy++)         \

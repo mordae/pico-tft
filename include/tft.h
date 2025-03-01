@@ -205,15 +205,15 @@ void tft_fill(color_t color);
  * Draw a simple sprite, starting from top-left coordinates.
  * Transparency indicates what color to treat as transparent.
  */
-void tft_draw_sprite(int x, int y, int w, int h, const color_t *data, int trsp);
+void tft_draw_sprite(int x, int y, int w, int h, const color_t *data, uint16_t trsp);
 
 /*
  * Draw a flipped sprite, starting from top-left coordinates.
  * Transparency indicates what color to treat as transparent.
  * Combination of flips and swap allows for 90° rotations.
  */
-void tft_draw_sprite_flipped(int x, int y, int w, int h, const color_t *data, int trsp, bool flip_x,
-			     bool flip_y, bool swap_xy);
+void tft_draw_sprite_flipped(int x, int y, int w, int h, const color_t *data, uint16_t trsp,
+			     bool flip_x, bool flip_y, bool swap_xy);
 
 /*
  * Draw given glyph at specified coordinates.
