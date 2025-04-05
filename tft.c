@@ -11,7 +11,7 @@
 #include <string.h>
 
 #if !defined(TFT_RST_DELAY)
-#define TFT_RST_DELAY 50
+#define TFT_RST_DELAY 150
 #endif
 
 #if !defined(TFT_HW_ACCEL)
@@ -203,7 +203,7 @@ void tft_init(void)
 	printf("tft: claimed dma%i for horizontal scaling\n", dma_ch_pio);
 
 	dma_ch_ctrl = dma_claim_unused_channel(true);
-	printf("tft: claimed dma%i for vertica scaling\n", dma_ch_ctrl);
+	printf("tft: claimed dma%i for vertical scaling\n", dma_ch_ctrl);
 
 	dma_channel_config dma_conf;
 
@@ -236,7 +236,7 @@ void tft_init(void)
 	printf("tft: begin reset & preflight...\n");
 
 	gpio_put(TFT_RST_PIN, 0);
-	sleep_ms(TFT_RST_DELAY);
+	sleep_ms(10);
 
 	gpio_put(TFT_RST_PIN, 1);
 	sleep_ms(TFT_RST_DELAY);

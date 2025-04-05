@@ -3,7 +3,6 @@
 To use these drivers with `pico-sdk`, modify your `CMakeLists.txt`:
 
 ```cmake
-set(TFT_DRIVER ili9225 CACHE STRING "TFT Driver")
 add_subdirectory(vendor/pico-tft)
 target_link_libraries(your_target pico_tft ...)
 ```
@@ -29,7 +28,7 @@ Your header file may include the original board file, but it must define followi
 #define TFT_SPI_DEV spi0
 
 /* Maximum speed to use: */
-#define TFT_BAUDRATE (64 * 1000 * 1000)
+#define TFT_BAUDRATE (67 * 1000 * 1000)
 
 /* Swap axes, or perhaps flip them: */
 #define TFT_SWAP_XY 1

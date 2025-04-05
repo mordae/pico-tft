@@ -14,7 +14,7 @@ if (NOT TARGET pico_tft)
       ${CMAKE_CURRENT_LIST_DIR}/tft.c
       ${CMAKE_CURRENT_LIST_DIR}/tft_dma_script.c
       ${CMAKE_CURRENT_LIST_DIR}/font.c
-      ${CMAKE_CURRENT_LIST_DIR}/ili9341.c
+      ${CMAKE_CURRENT_LIST_DIR}/st7789v.c
   )
 
   target_link_libraries(
