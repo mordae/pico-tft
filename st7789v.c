@@ -33,10 +33,6 @@ void tft_preflight(void)
 	uint8_t colmod = 0x6d; /* 16 bits in 565 format */
 	tft_control(0x3a, &colmod, sizeof colmod);
 
-	/* WRDISBV: Write Display Brightness */
-	uint8_t wrdisbv[] = { 32 };
-	tft_control(0x51, wrdisbv, sizeof wrdisbv);
-
 	/* DISPON: Display On */
 	tft_control(0x29, NULL, 0);
 	sleep_ms(120);
