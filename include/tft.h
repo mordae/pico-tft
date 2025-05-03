@@ -228,9 +228,12 @@ void tft_draw_glyph(int x, int y, color_t color, char c);
  * bottom right for the tft_draw_string_right and bottom center for the
  * tft_draw_string_center.
  */
-void tft_draw_string(int x, int y, color_t color, const char *str);
-void tft_draw_string_right(int x, int y, color_t color, const char *str);
-void tft_draw_string_center(int x, int y, color_t color, const char *str);
+void tft_draw_string(int x, int y, color_t color, const char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
+void tft_draw_string_right(int x, int y, color_t color, const char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
+void tft_draw_string_center(int x, int y, color_t color, const char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
 
 /*
  * Write directly into a control register.
