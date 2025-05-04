@@ -33,10 +33,6 @@ void tft_preflight(void)
 	uint8_t colmod = 0x6d; /* 16 bits in 565 format */
 	tft_control(0x3a, &colmod, sizeof colmod);
 
-	/* DISPON: Display On */
-	tft_control(0x29, NULL, 0);
-	sleep_ms(120);
-
 	/* CASET: Column Address Set */
 	uint8_t caset[] = { 0, 0, WIDTH >> 8, WIDTH & 0xff };
 	tft_control(0x2a, caset, sizeof caset);
@@ -48,6 +44,12 @@ void tft_preflight(void)
 	/* FRCTRL2: Frame Rate Control in Normal Mode */
 	uint8_t frctr2[] = { 8 }; // 78 fps
 	tft_control(0xc6, frctr2, sizeof frctr2);
+}
+
+void tft_display_on(void)
+{
+	/* DISPON: Display On */
+	tft_control(0x29, NULL, 0);
 }
 
 void tft_begin_write(void)

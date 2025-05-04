@@ -116,6 +116,9 @@ void tft_wait_for_finish(void);
 /* Begin sync and wait for it to finish. */
 void tft_sync(void);
 
+/* Turn the screen on. */
+void tft_display_on(void);
+
 /* We are using double buffering. */
 extern color_t tft_buffers[2][TFT_RAW_HEIGHT][TFT_RAW_WIDTH];
 

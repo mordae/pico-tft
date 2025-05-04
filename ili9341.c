@@ -43,10 +43,6 @@ void tft_preflight(void)
 	uint8_t colmod = 0x6d; /* 16 bits in 565 format */
 	tft_control(0x3a, &colmod, sizeof colmod);
 
-	/* 8.2.19 DISPON: Display On */
-	tft_control(0x29, NULL, 0);
-	sleep_ms(120);
-
 	/* 8.3.8 ETMOD: Entry Mode Set */
 	uint8_t etmod = 0x07;
 	tft_control(0xb7, &etmod, sizeof etmod);
@@ -62,6 +58,12 @@ void tft_preflight(void)
 	/* 8.3.2 FRMCTR1: Frame Rate Control */
 	uint8_t frmctr1[] = { 0, 24 }; // 79 fps
 	tft_control(0xb1, frmctr1, sizeof frmctr1);
+}
+
+void tft_display_on(void)
+{
+	/* 8.2.19 DISPON: Display On */
+	tft_control(0x29, NULL, 0);
 }
 
 void tft_begin_write(void)
