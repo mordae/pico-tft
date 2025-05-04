@@ -12,6 +12,9 @@ void tft_preflight(void)
 	tft_control(0x01, NULL, 0);
 	sleep_ms(120);
 
+	/* DISPOFF: Display Off */
+	tft_control(0x28, NULL, 0);
+
 	/* SLPOUT: Sleep Out */
 	tft_control(0x11, NULL, 0);
 	sleep_ms(120);
