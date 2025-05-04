@@ -8,16 +8,18 @@
 
 void tft_preflight(void)
 {
+#if 0
 	/* SWRESET: Software Reset */
 	tft_control(0x01, NULL, 0);
 	sleep_ms(120);
+#endif
 
 	/* DISPOFF: Display Off */
 	tft_control(0x28, NULL, 0);
 
 	/* SLPOUT: Sleep Out */
 	tft_control(0x11, NULL, 0);
-	sleep_ms(120);
+	sleep_ms(5);
 
 	/* RDDID: Read Display ID */
 	uint8_t ids[4] = { 0, 0, 0, 0 };
@@ -47,6 +49,10 @@ void tft_preflight(void)
 	/* FRCTRL2: Frame Rate Control in Normal Mode */
 	uint8_t frctr2[] = { 8 }; // 78 fps
 	tft_control(0xc6, frctr2, sizeof frctr2);
+
+	/* SPI2EN: SPI2 Enable */
+	uint8_t spi2en[] = { 0x01 }; // !SPI2EN + SPIRD
+	tft_control(0xe7, spi2en, sizeof spi2en);
 }
 
 void tft_display_on(void)
@@ -63,7 +69,7 @@ void tft_begin_write(void)
 	for (int i = 0; i < HEIGHT * 10; i++) {
 		uint8_t scl[3];
 		tft_read(0x45, scl, sizeof scl, 3);
-		scanline = ((unsigned)scl[1] << 2) | (scl[2] >> 6);
+		scanline = (scl[1] << 8) | scl[2];
 
 		if (scanline >= 4 && scanline < 32) {
 			break;

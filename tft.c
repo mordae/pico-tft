@@ -234,6 +234,7 @@ void tft_init(void)
 	dma_channel_configure(dma_ch_spi, &dma_conf, &spi_get_hw(TFT_SPI_DEV)->dr,
 			      &TFT_PIO->rxf[pio_sm], TFT_RAW_WIDTH * 2 * TFT_RAW_HEIGHT * 2, false);
 
+#if 0
 	printf("tft: begin reset & preflight...\n");
 
 	gpio_put(TFT_RST_PIN, 0);
@@ -241,6 +242,10 @@ void tft_init(void)
 
 	gpio_put(TFT_RST_PIN, 1);
 	sleep_ms(TFT_RST_DELAY);
+#else
+	printf("tft begin preflight...\n");
+	gpio_put(TFT_RST_PIN, 1);
+#endif
 
 	tft_preflight();
 }
