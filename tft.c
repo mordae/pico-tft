@@ -346,7 +346,36 @@ void tft_fill(color_t color)
 
 void tft_draw_sprite(int x, int y, int w, int h, const color_t *data, uint16_t trsp)
 {
-	tft_draw_sprite_flipped(x, y, w, h, data, trsp, false, false, false);
+	int x0 = x - tft_origin_x;
+	int y0 = y - tft_origin_y;
+
+	for (int dy = 0; dy < h; dy++) {
+		int y = y0 + dy;
+
+		if (y < tft_clip_y0)
+			continue;
+
+		if (y >= tft_clip_y1)
+			break;
+
+		for (int dx = 0; dx < w; dx++) {
+			int x = x0 + dx;
+
+			if (x < tft_clip_x0)
+				continue;
+
+			if (x >= tft_clip_x1)
+				break;
+
+			color_t color = data[(dy * w) + dx];
+			if (color != trsp)
+#if TFT_SWAP_XY
+				tft_input[x][y] = color;
+#else
+				tft_input[y][x] = color;
+#endif
+		}
+	}
 }
 
 void tft_draw_sprite_flipped(int x, int y, int w, int h, const color_t *data, uint16_t trsp,
